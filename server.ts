@@ -1,6 +1,7 @@
 import express, { Request, Response } from "express";
 import path from "path";
 import fs from "fs";
+import crypto from "crypto";
 import dotenv from "dotenv";
 import { GoogleGenAI } from "@google/genai";
 import { createServer as createViteServer } from "vite";
@@ -14,6 +15,7 @@ const configuredAiMode = process.env.AI_MODE?.toLowerCase();
 const AI_MODE: "local" | "auto" | "gemini" =
   configuredAiMode === "gemini" || configuredAiMode === "auto" ? configuredAiMode : "local";
 const ALLOWED_ROLES = new Set(["admin", "manager", "warehouse_manager", "cashier", "salesperson", "sales_agent"]);
+const hashPassword = (password: string) => crypto.createHash("sha256").update(password).digest("hex");
 
 app.use(express.json({ limit: "25mb" }));
 
@@ -938,6 +940,21 @@ function saveDb() {
 
 loadDb();
 
+// Local/demo administrator requested for the sign-in screen. Production deployments
+// must replace this with a proper identity provider and salted password hashes.
+function ensureDemoAdminCredentials() {
+  const admin = (db.users as any[]).find(user => user.role === "admin") || (db.users as any[])[0];
+  if (!admin) return;
+  admin.email = "rajaharoon320@gmail.com";
+  admin.username = "rajaharoon320";
+  admin.passwordHash = hashPassword("12345678");
+  (db.users as any[]).forEach(user => {
+    if (!user.passwordHash) user.passwordHash = hashPassword("12345678");
+  });
+  saveDb();
+}
+ensureDemoAdminCredentials();
+
 // Helper: Calculate Expiry Status based on current date
 function calculateExpiryStatus(expiryDateStr?: string, warningDays = 30): "fresh" | "expiring_soon" | "expired" {
   if (!expiryDateStr) return "fresh";
@@ -980,17 +997,33 @@ app.get("/api/health", (req: Request, res: Response) => {
 
 // Authentication
 app.post("/api/auth/login", (req: Request, res: Response) => {
-  const { username, password } = req.body;
-  const user = db.users.find(u => u.username.toLowerCase() === (username || "").toLowerCase() && u.active);
+  const { identifier, username, password } = req.body;
+  const loginValue = String(identifier || username || "").trim().toLowerCase();
+  const user: any = db.users.find(u => (u.username.toLowerCase() === loginValue || u.email.toLowerCase() === loginValue) && u.active);
   if (!user) {
-    return res.status(401).json({ error: "Invalid username or account is deactivated" });
+    return res.status(401).json({ error: "Invalid email/username or account is deactivated" });
   }
+  if (!password || user.passwordHash !== hashPassword(password)) return res.status(401).json({ error: "Incorrect password" });
   user.lastLogin = new Date().toISOString();
   logAudit(user.id, user.name, user.role, "USER_LOGIN", "User", user.id, `User logged in from POS terminal`);
   res.json({
     user,
     token: "pos-token-" + user.id + "-" + Date.now()
   });
+});
+
+app.post("/api/auth/signup", (req: Request, res: Response) => {
+  const { name, username, email, phone, role, password } = req.body;
+  const requestedRoles = new Set(["manager", "salesperson", "sales_agent", "cashier", "warehouse_manager"]);
+  if (!name || !username || !email || !password) return res.status(400).json({ error: "Name, username, email, and password are required" });
+  if (String(password).length < 8) return res.status(400).json({ error: "Password must be at least 8 characters" });
+  if (!requestedRoles.has(role)) return res.status(400).json({ error: "Select a valid staff role" });
+  if (db.users.some(u => u.username.toLowerCase() === username.toLowerCase() || u.email.toLowerCase() === email.toLowerCase())) return res.status(400).json({ error: "Username or email already exists" });
+  const user: any = { id: "u-" + Date.now(), name, username, email, phone: phone || "", role, active: false, avatar: "", createdAt: new Date().toISOString(), lastLogin: undefined, passwordHash: hashPassword(password) };
+  db.users.push(user);
+  logAudit(user.id, user.name, user.role, "SIGNUP_REQUESTED", "User", user.id, `${user.name} requested ${user.role} portal access`);
+  saveDb();
+  res.status(201).json({ message: "Signup request submitted. An admin must activate your account before you can sign in." });
 });
 
 // Staff portal sessions. These power the admin activity view and are intentionally

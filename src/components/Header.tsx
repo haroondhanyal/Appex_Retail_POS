@@ -396,37 +396,7 @@ export function Header({
                 )}
               </div>
 
-              <div className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wider px-3 py-1 mt-1">
-                Switch Cashier / Role Account
-              </div>
-
-              <div className="space-y-0.5">
-                {users.filter(u => u.active).map(u => (
-                  <button
-                    key={u.id}
-                    onClick={() => handleLogin(u)}
-                    disabled={isSessionUpdating}
-                    className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs text-left transition ${
-                      currentUser.id === u.id
-                        ? "bg-neutral-100 text-neutral-900 font-bold"
-                        : "text-neutral-700 hover:bg-neutral-50"
-                    }`}
-                  >
-                    <div className="flex items-center gap-2">
-                      <UserCheck className="w-3.5 h-3.5 text-neutral-500" />
-                      <div>
-                        <div>{u.name}</div>
-                        <span className="text-[10px] text-neutral-400 font-normal uppercase">{ROLE_LABELS[u.role]}</span>
-                      </div>
-                    </div>
-                    {currentUser.id === u.id && activeSession ? (
-                      <span className="text-[10px] text-emerald-600">Logged in</span>
-                    ) : (
-                      <span className="text-[10px] font-bold text-blue-600">Login</span>
-                    )}
-                  </button>
-                ))}
-              </div>
+              <p className="px-3 py-2 text-[11px] leading-relaxed text-neutral-500">For account security, use Logout and sign in with the correct email/username and password.</p>
             </div>
           )}
         </div>

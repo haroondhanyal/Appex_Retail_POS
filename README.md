@@ -158,6 +158,19 @@ Example prompts:
 
 ## Getting started
 
+### Demo sign-in and signup
+
+The app opens on a dedicated sign-in screen. The seeded demo administrator is:
+
+```text
+Email: rajaharoon320@gmail.com
+Password: 12345678
+```
+
+Use **Sign up** to submit a manager, warehouse manager, cashier, salesperson, or sales-agent account request. New accounts are inactive by default; an administrator activates them from **Admin & Staff Control** before they can sign in. Staff can sign in using either their email or username, and Logout ends the tracked portal session before returning to the sign-in screen.
+
+> These credentials and the SHA-256 password storage are for local/demo use only. Before deployment, replace them with an authentication provider or a production password system using salted, adaptive hashes, secure tokens/cookies, rate limits, and password-reset verification.
+
 ### Prerequisites
 
 - Node.js 18 or later

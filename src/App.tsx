@@ -14,6 +14,7 @@ import { AIAssistantView } from "./components/AIAssistantView";
 import { AuditLogsView } from "./components/AuditLogsView";
 import { SettingsView } from "./components/SettingsView";
 import { BarcodeScannerModal } from "./components/BarcodeScannerModal";
+import { AuthScreen } from "./components/AuthScreen";
 
 import {
   User,
@@ -63,6 +64,7 @@ export default function App() {
   const [isSyncing, setIsSyncing] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [activeSession, setActiveSession] = useState<StaffSession | null>(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   // Core Data State
   const [users, setUsers] = useState<User[]>([]);
@@ -368,13 +370,14 @@ export default function App() {
     const session = await api.startStaffSession(user.id);
     setActiveSession(session);
     handleSwitchUser(user);
+    setIsAuthenticated(true);
     api.getUsers().then(setUsers).catch(() => {});
   };
 
   const handleLogoutUser = async () => {
-    if (!activeSession) return;
-    await api.endStaffSession(activeSession.id);
+    if (activeSession) await api.endStaffSession(activeSession.id);
     setActiveSession(null);
+    setIsAuthenticated(false);
   };
 
   const handleUpdateSettings = async (newSettings: Partial<SystemSettings>) => {
@@ -429,6 +432,8 @@ export default function App() {
         return "theme-grey bg-neutral-100 text-neutral-900";
     }
   };
+
+  if (!isAuthenticated) return <AuthScreen onAuthenticated={handleLoginUser} />;
 
   return (
     <div className={`min-h-screen flex flex-col font-sans antialiased ${getThemeWrapperClass()}`}>
