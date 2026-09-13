@@ -74,6 +74,10 @@ export function POSScreen({
   // Discounts & notes
   const [cartDiscountPercent, setCartDiscountPercent] = useState<number>(0);
   const [cartNotes, setCartNotes] = useState("");
+  const [orderNumber, setOrderNumber] = useState("");
+  const [orderStatus, setOrderStatus] = useState<"pending" | "confirmed" | "packed" | "shipped" | "delivered">("confirmed");
+  const [deliveryCharge, setDeliveryCharge] = useState(0);
+  const [riderName, setRiderName] = useState("");
 
   // Held carts queue
   const [heldCarts, setHeldCarts] = useState<HeldCart[]>([]);
@@ -228,7 +232,7 @@ export function POSScreen({
 
     const netBeforeCartDiscount = subtotal - itemDiscountsTotal;
     const cartDiscountAmount = netBeforeCartDiscount * (cartDiscountPercent / 100);
-    const grandTotal = Math.max(0, netBeforeCartDiscount - cartDiscountAmount + taxTotal);
+    const grandTotal = Math.max(0, netBeforeCartDiscount - cartDiscountAmount + taxTotal + deliveryCharge);
 
     return {
       subtotal: Number(subtotal.toFixed(2)),
@@ -237,7 +241,7 @@ export function POSScreen({
       taxTotal: Number(taxTotal.toFixed(2)),
       grandTotal: Number(grandTotal.toFixed(2))
     };
-  }, [cart, cartDiscountPercent]);
+  }, [cart, cartDiscountPercent, deliveryCharge]);
 
   // Hold / Resume Cart
   const handleHoldCart = () => {
@@ -276,6 +280,13 @@ export function POSScreen({
   // Open Checkout
   const handleOpenCheckout = () => {
     if (cart.length === 0) return;
+    if (selectedCustomer?.customerType === "wholesale" && selectedCustomer.minimumOrderQuantity) {
+      const totalUnits = cart.reduce((sum, item) => sum + item.quantity, 0);
+      if (totalUnits < selectedCustomer.minimumOrderQuantity) {
+        alert(`Wholesale minimum order is ${selectedCustomer.minimumOrderQuantity} units. Current cart has ${totalUnits}.`);
+        return;
+      }
+    }
     setAmountTendered(String(calculations.grandTotal));
     setSelectedPaymentMethod("cash");
     setShowPaymentModal(true);
@@ -295,6 +306,12 @@ export function POSScreen({
         customerId: selectedCustomer?.id || "cust-walkin",
         customerName: selectedCustomer?.name || "Walk-in Customer",
         customerPhone: selectedCustomer?.phone || "N/A",
+        customerType: selectedCustomer?.customerType || "walk_in",
+        orderNumber: orderNumber || undefined,
+        orderStatus: orderNumber ? orderStatus : undefined,
+        deliveryAddress: selectedCustomer?.deliveryAddress || selectedCustomer?.address || undefined,
+        deliveryCharge,
+        riderName: riderName || undefined,
         items: cart.map(item => ({
           productId: item.product.id,
           productName: item.product.name,
@@ -332,6 +349,9 @@ export function POSScreen({
       setCart([]);
       setCartDiscountPercent(0);
       setCartNotes("");
+      setOrderNumber("");
+      setDeliveryCharge(0);
+      setRiderName("");
       setShowPaymentModal(false);
       setCompletedSale(completed);
       setShowReceiptModal(true);
@@ -488,6 +508,9 @@ export function POSScreen({
               onChange={e => {
                 const found = customers.find(c => c.id === e.target.value);
                 setSelectedCustomer(found || null);
+                setDeliveryCharge(found?.deliveryCharge || 0);
+                setOrderStatus(found?.defaultOrderStatus || "confirmed");
+                setCartDiscountPercent(found?.customerType === "wholesale" ? found.wholesaleDiscountPercent || 0 : 0);
               }}
               className="w-full bg-transparent text-xs font-semibold text-neutral-800 focus:outline-hidden"
             >
@@ -498,6 +521,17 @@ export function POSScreen({
               ))}
             </select>
           </div>
+
+          {(selectedCustomer?.customerType === "online" || selectedCustomer?.customerType === "delivery") && (
+            <div className="flex flex-wrap gap-1.5 text-[11px]">
+              <input value={orderNumber} onChange={e => setOrderNumber(e.target.value)} placeholder="Order #" className="w-24 px-2 py-1 border border-neutral-200 rounded-md" />
+              <input value={riderName} onChange={e => setRiderName(e.target.value)} placeholder="Rider" className="w-20 px-2 py-1 border border-neutral-200 rounded-md" />
+              <input type="number" min="0" step="0.01" value={deliveryCharge || ""} onChange={e => setDeliveryCharge(Number(e.target.value) || 0)} placeholder="Delivery" className="w-20 px-2 py-1 border border-neutral-200 rounded-md" title="Delivery charge" />
+              <select value={orderStatus} onChange={e => setOrderStatus(e.target.value as typeof orderStatus)} className="px-1 py-1 border border-neutral-200 rounded-md bg-white">
+                <option value="pending">Pending</option><option value="confirmed">Confirmed</option><option value="packed">Packed</option><option value="shipped">Shipped</option><option value="delivered">Delivered</option>
+              </select>
+            </div>
+          )}
 
           <div className="flex items-center gap-1">
             {/* Park / Hold Cart */}
@@ -889,7 +923,7 @@ export function POSScreen({
               >
                 Dismiss Item
               </button>
-              {currentUser.role !== "cashier" ? (
+              {currentUser.role === "admin" || currentUser.role === "manager" ? (
                 <button
                   onClick={() => {
                     const p = expiredWarningProduct;

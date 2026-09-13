@@ -13,7 +13,7 @@ const PORT = Number(process.env.PORT) || 3000;
 const configuredAiMode = process.env.AI_MODE?.toLowerCase();
 const AI_MODE: "local" | "auto" | "gemini" =
   configuredAiMode === "gemini" || configuredAiMode === "auto" ? configuredAiMode : "local";
-const ALLOWED_ROLES = new Set(["admin", "manager", "warehouse_manager", "cashier", "salesperson"]);
+const ALLOWED_ROLES = new Set(["admin", "manager", "warehouse_manager", "cashier", "salesperson", "sales_agent"]);
 
 app.use(express.json({ limit: "25mb" }));
 
@@ -510,6 +510,7 @@ const INITIAL_CUSTOMERS = [
   {
     id: "cust-walkin",
     name: "Walk-in Customer",
+    customerType: "walk_in",
     phone: "N/A",
     email: "walkin@apexretail.pos",
     address: "Counter Checkout",
@@ -557,44 +558,52 @@ const INITIAL_SUPPLIERS = [
   {
     id: "sup-1",
     name: "Global Beverage Logistics",
+    company: "Global Beverage Logistics LLC",
     contactPerson: "Hans Gruber",
     phone: "+1 (800) 555-0199",
     email: "orders@globalbevlogistics.com",
     address: "Industrial Park Gate 4, Chicago, IL",
     outstandingPayable: 1450.00,
+    balance: 1450.00,
     totalPurchased: 18450.00,
     categories: ["Beverages"]
   },
   {
     id: "sup-2",
     name: "FarmFresh Organics Co.",
+    company: "FarmFresh Organics Cooperative",
     contactPerson: "Clara Higgins",
     phone: "+1 (800) 555-0288",
     email: "clara@farmfreshorganics.com",
     address: "Route 12 Valley Farms, Salinas, CA",
     outstandingPayable: 820.50,
+    balance: 820.50,
     totalPurchased: 12100.00,
     categories: ["Fresh Produce", "Dairy & Eggs"]
   },
   {
     id: "sup-3",
     name: "Metro Wholesale Dist.",
+    company: "Metro Wholesale Distribution Inc.",
     contactPerson: "Anthony Russo",
     phone: "+1 (800) 555-0377",
     email: "supply@metrowholesale.net",
     address: "Warehouse Hub 11, Queens, NY",
     outstandingPayable: 0,
+    balance: 0,
     totalPurchased: 29400.00,
     categories: ["Bakery & Snacks"]
   },
   {
     id: "sup-4",
     name: "Apex FMCG Supplies",
+    company: "Apex FMCG Supplies Ltd.",
     contactPerson: "Valerie Vance",
     phone: "+1 (800) 555-0466",
     email: "valerie@apexfmcg.com",
     address: "Logistics Boulevard, Dallas, TX",
     outstandingPayable: 560.00,
+    balance: 560.00,
     totalPurchased: 8900.00,
     categories: ["Personal Care", "Household"]
   }
@@ -892,6 +901,23 @@ function loadDb() {
       if (parsed.products && parsed.products.length > 0) {
         db = parsed;
         if (!Array.isArray((db as any).sessions)) (db as any).sessions = [];
+        (db as any).suppliers = (db as any).suppliers.map((supplier: any) => ({
+          ...supplier,
+          company: supplier.company || supplier.name,
+          balance: Number(supplier.balance ?? supplier.outstandingPayable ?? 0),
+          outstandingPayable: Number(supplier.outstandingPayable ?? supplier.balance ?? 0),
+          categories: supplier.categories || []
+        }));
+        (db as any).customers = (db as any).customers.map((customer: any) => ({
+          ...customer,
+          customerType: customer.customerType || (customer.id === "cust-walkin" ? "walk_in" : "registered"),
+          deliveryAddress: customer.deliveryAddress || "",
+          deliveryCharge: Number(customer.deliveryCharge || 0),
+          wholesaleDiscountPercent: Number(customer.wholesaleDiscountPercent || 0),
+          minimumOrderQuantity: Number(customer.minimumOrderQuantity || 0),
+          defaultOrderStatus: customer.defaultOrderStatus || "pending"
+        }));
+        saveDb();
         console.log("Database loaded from persistent file:", DB_FILE);
         return;
       }
@@ -1223,6 +1249,12 @@ app.post("/api/sales", (req: Request, res: Response) => {
     customerId,
     customerName,
     customerPhone,
+    customerType,
+    orderNumber,
+    orderStatus,
+    deliveryAddress,
+    deliveryCharge,
+    riderName,
     items,
     subtotal,
     itemDiscountsTotal,
@@ -1280,6 +1312,12 @@ app.post("/api/sales", (req: Request, res: Response) => {
     customerId: customerId || "cust-walkin",
     customerName: customerName || "Walk-in Customer",
     customerPhone: customerPhone || "N/A",
+    customerType: customerType || "walk_in",
+    orderNumber: orderNumber || undefined,
+    orderStatus: orderStatus || undefined,
+    deliveryAddress: deliveryAddress || undefined,
+    deliveryCharge: Number(deliveryCharge || 0),
+    riderName: riderName || undefined,
     items,
     subtotal: Number(subtotal),
     itemDiscountsTotal: Number(itemDiscountsTotal || 0),
@@ -1601,10 +1639,27 @@ app.put("/api/purchases/:id/receive", (req: Request, res: Response) => {
   res.json(po);
 });
 
+// Pending orders can be corrected before goods are received. Received POs are
+// locked because their quantities are already reflected in inventory.
+app.put("/api/purchases/:id", (req: Request, res: Response) => {
+  const po = db.purchases.find(p => p.id === req.params.id);
+  if (!po) return res.status(404).json({ error: "Purchase order not found" });
+  if (po.status === "received") return res.status(400).json({ error: "Received purchase orders are locked to protect stock records" });
+  const { supplierId, supplierName, notes, status } = req.body;
+  if (supplierId !== undefined) po.supplierId = supplierId;
+  if (supplierName !== undefined) po.supplierName = supplierName;
+  if (notes !== undefined) po.notes = notes;
+  if (status === "ordered" || status === "pending" || status === "cancelled") po.status = status;
+  logAudit("admin", "Admin", "manager", "PO_UPDATED", "Purchase", po.poNumber, `Updated purchase order ${po.poNumber}`);
+  saveDb();
+  res.json(po);
+});
+
 // Delete Purchase Order
 app.delete("/api/purchases/:id", (req: Request, res: Response) => {
   const index = db.purchases.findIndex(p => p.id === req.params.id);
   if (index === -1) return res.status(404).json({ error: "Purchase order not found" });
+  if (db.purchases[index].status === "received") return res.status(400).json({ error: "Received purchase orders are locked to protect stock records" });
   const removed = db.purchases.splice(index, 1)[0];
   logAudit("admin", "Admin", "manager", "PO_DELETED", "Purchase", removed.poNumber, `Deleted purchase order ${removed.poNumber}`);
   saveDb();
@@ -1721,7 +1776,7 @@ app.get("/api/customers", (req: Request, res: Response) => {
 });
 
 app.post("/api/customers", (req: Request, res: Response) => {
-  const { name, phone, email, address } = req.body;
+  const { name, phone, email, address, customerType, companyName, taxNumber, creditTerms, wholesaleDiscountPercent, minimumOrderQuantity, priceListName, deliveryAddress, deliveryCharge, preferredPaymentMethod, defaultOrderStatus, photo } = req.body;
   if (!name) return res.status(400).json({ error: "Customer name is required" });
 
   const newCustomer = {
@@ -1730,6 +1785,18 @@ app.post("/api/customers", (req: Request, res: Response) => {
     phone: phone || "",
     email: email || "",
     address: address || "",
+    customerType: customerType || "registered",
+    companyName: companyName || "",
+    taxNumber: taxNumber || "",
+    creditTerms: creditTerms || "",
+    wholesaleDiscountPercent: Number(wholesaleDiscountPercent || 0),
+    minimumOrderQuantity: Number(minimumOrderQuantity || 0),
+    priceListName: priceListName || "",
+    deliveryAddress: deliveryAddress || address || "",
+    deliveryCharge: Number(deliveryCharge || 0),
+    preferredPaymentMethod: preferredPaymentMethod || undefined,
+    defaultOrderStatus: defaultOrderStatus || "pending",
+    photo: photo || "",
     totalPurchases: 0,
     outstandingBalance: 0,
     visitCount: 0,
@@ -1750,31 +1817,72 @@ app.put("/api/customers/:id", (req: Request, res: Response) => {
   res.json(customer);
 });
 
+app.delete("/api/customers/:id", (req: Request, res: Response) => {
+  if (req.params.id === "cust-walkin") return res.status(400).json({ error: "The default Walk-in Customer cannot be deleted" });
+  const index = db.customers.findIndex(c => c.id === req.params.id);
+  if (index === -1) return res.status(404).json({ error: "Customer not found" });
+  const removed = db.customers.splice(index, 1)[0];
+  logAudit("admin", "Admin", "admin", "CUSTOMER_DELETED", "Customer", removed.id, `Deleted customer ${removed.name}`);
+  saveDb();
+  res.json({ success: true, id: removed.id });
+});
+
 // Suppliers
 app.get("/api/suppliers", (req: Request, res: Response) => {
   res.json(db.suppliers);
 });
 
 app.post("/api/suppliers", (req: Request, res: Response) => {
-  const { name, contactPerson, phone, email, address, categories } = req.body;
+  const { name, company, contactPerson, phone, email, address, categories, photo } = req.body;
   if (!name) return res.status(400).json({ error: "Supplier name is required" });
 
   const newSupplier = {
     id: "sup-" + Date.now(),
     name,
+    company: company || name,
     contactPerson: contactPerson || "",
     phone: phone || "",
     email: email || "",
     address: address || "",
     outstandingPayable: 0,
+    balance: 0,
     totalPurchased: 0,
     categories: categories || []
+    ,photo: photo || ""
   };
 
   db.suppliers.push(newSupplier);
   logAudit("admin", "Admin", "admin", "SUPPLIER_CREATED", "Supplier", newSupplier.id, `Added supplier ${name}`);
   saveDb();
   res.status(201).json(newSupplier);
+});
+
+app.put("/api/suppliers/:id", (req: Request, res: Response) => {
+  const supplier = db.suppliers.find(item => item.id === req.params.id);
+  if (!supplier) return res.status(404).json({ error: "Supplier not found" });
+  const { name, company, contactPerson, phone, email, address, categories, photo } = req.body;
+  Object.assign(supplier, {
+    ...(name !== undefined ? { name } : {}),
+    ...(company !== undefined ? { company } : {}),
+    ...(contactPerson !== undefined ? { contactPerson } : {}),
+    ...(phone !== undefined ? { phone } : {}),
+    ...(email !== undefined ? { email } : {}),
+    ...(address !== undefined ? { address } : {}),
+    ...(categories !== undefined ? { categories } : {}),
+    ...(photo !== undefined ? { photo } : {})
+  });
+  logAudit("admin", "Admin", "admin", "SUPPLIER_UPDATED", "Supplier", supplier.id, `Updated supplier ${supplier.name}`);
+  saveDb();
+  res.json(supplier);
+});
+
+app.delete("/api/suppliers/:id", (req: Request, res: Response) => {
+  const index = db.suppliers.findIndex(supplier => supplier.id === req.params.id);
+  if (index === -1) return res.status(404).json({ error: "Supplier not found" });
+  const removed = db.suppliers.splice(index, 1)[0];
+  logAudit("admin", "Admin", "admin", "SUPPLIER_DELETED", "Supplier", removed.id, `Deleted supplier ${removed.name}`);
+  saveDb();
+  res.json({ success: true, id: removed.id });
 });
 
 // Reports & Dashboard Stats

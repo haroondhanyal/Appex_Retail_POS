@@ -215,6 +215,12 @@ export const api = {
     }
   },
 
+  async updatePurchase(id: string, data: Partial<Purchase>): Promise<Purchase> {
+    const res = await fetch(`/api/purchases/${id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) });
+    if (!res.ok) throw new Error((await res.json()).error || "Failed to update purchase order");
+    return res.json();
+  },
+
   async disposeExpired(payload: {
     productId: string;
     batchId?: string;
@@ -265,6 +271,17 @@ export const api = {
     return res.json();
   },
 
+  async updateCustomer(id: string, data: Partial<Customer>): Promise<Customer> {
+    const res = await fetch(`/api/customers/${id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) });
+    if (!res.ok) throw new Error((await res.json()).error || "Failed to update customer");
+    return res.json();
+  },
+
+  async deleteCustomer(id: string): Promise<void> {
+    const res = await fetch(`/api/customers/${id}`, { method: "DELETE" });
+    if (!res.ok) throw new Error((await res.json()).error || "Failed to delete customer");
+  },
+
   async getSuppliers(): Promise<Supplier[]> {
     const res = await fetch("/api/suppliers");
     if (!res.ok) throw new Error("Failed to fetch suppliers");
@@ -279,6 +296,17 @@ export const api = {
     });
     if (!res.ok) throw new Error("Failed to create supplier");
     return res.json();
+  },
+
+  async updateSupplier(id: string, data: Partial<Supplier>): Promise<Supplier> {
+    const res = await fetch(`/api/suppliers/${id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) });
+    if (!res.ok) throw new Error((await res.json()).error || "Failed to update supplier");
+    return res.json();
+  },
+
+  async deleteSupplier(id: string): Promise<void> {
+    const res = await fetch(`/api/suppliers/${id}`, { method: "DELETE" });
+    if (!res.ok) throw new Error((await res.json()).error || "Failed to delete supplier");
   },
 
   // Users

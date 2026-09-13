@@ -28,9 +28,24 @@ import {
   SystemSettings,
   AuditLog,
   ThemeType,
-  StaffSession
+  StaffSession,
+  Role
 } from "./types";
 import { api } from "./services/api";
+
+const ROLE_VIEW_ACCESS: Record<Role, string[]> = {
+  admin: ["pos", "dashboard", "products", "inventory", "sales", "purchases", "directory", "reports", "ai", "audit", "settings"],
+  manager: ["pos", "dashboard", "products", "inventory", "sales", "purchases", "directory", "reports", "ai"],
+  // Warehouse staff work only with the stock-control workspace. Purchasing,
+  // reporting and the AI assistant deliberately remain management functions.
+  warehouse_manager: ["inventory"],
+  cashier: ["pos", "sales", "ai"],
+  salesperson: ["pos", "sales", "ai"],
+  sales_agent: ["pos", "sales", "ai"]
+};
+
+const defaultViewForRole = (role: Role) =>
+  role === "warehouse_manager" ? "inventory" : role === "cashier" || role === "salesperson" || role === "sales_agent" ? "pos" : "dashboard";
 
 export default function App() {
   // Navigation & Layout State
@@ -172,17 +187,25 @@ export default function App() {
   // Global Keyboard Shortcuts (F2 -> POS, F4 -> Scanner)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "F2") {
+      if (e.key === "F2" && ROLE_VIEW_ACCESS[currentUser.role].includes("pos")) {
         e.preventDefault();
         setActiveView("pos");
-      } else if (e.key === "F4") {
+      } else if (e.key === "F4" && ROLE_VIEW_ACCESS[currentUser.role].includes("pos")) {
         e.preventDefault();
         setIsScannerOpen(prev => !prev);
       }
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, []);
+  }, [currentUser.role]);
+
+  // Keep the rendered portal safe even if a stale view is left over after a
+  // role change or a navigation event from a child component.
+  useEffect(() => {
+    if (!ROLE_VIEW_ACCESS[currentUser.role].includes(activeView)) {
+      setActiveView(defaultViewForRole(currentUser.role));
+    }
+  }, [activeView, currentUser.role]);
 
   // Handlers
   const handleSyncOffline = async () => {
@@ -263,14 +286,39 @@ export default function App() {
     setPurchases(prev => prev.filter(purchase => purchase.id !== id));
   };
 
+  const handleUpdatePurchase = async (id: string, data: Partial<Purchase>) => {
+    const updated = await api.updatePurchase(id, data);
+    setPurchases(prev => prev.map(purchase => purchase.id === id ? updated : purchase));
+  };
+
   const handleCreateCustomer = async (data: Partial<Customer>) => {
     const newC = await api.createCustomer(data);
     setCustomers(prev => [...prev, newC]);
   };
 
+  const handleUpdateCustomer = async (id: string, data: Partial<Customer>) => {
+    const updated = await api.updateCustomer(id, data);
+    setCustomers(prev => prev.map(customer => customer.id === id ? updated : customer));
+  };
+
+  const handleDeleteCustomer = async (id: string) => {
+    await api.deleteCustomer(id);
+    setCustomers(prev => prev.filter(customer => customer.id !== id));
+  };
+
   const handleCreateSupplier = async (data: Partial<Supplier>) => {
     const newS = await api.createSupplier(data);
     setSuppliers(prev => [...prev, newS]);
+  };
+
+  const handleUpdateSupplier = async (id: string, data: Partial<Supplier>) => {
+    const updated = await api.updateSupplier(id, data);
+    setSuppliers(prev => prev.map(supplier => supplier.id === id ? updated : supplier));
+  };
+
+  const handleDeleteSupplier = async (id: string) => {
+    await api.deleteSupplier(id);
+    setSuppliers(prev => prev.filter(supplier => supplier.id !== id));
   };
 
   const handleCreateUser = async (data: Partial<User>) => {
@@ -292,13 +340,12 @@ export default function App() {
   const handleSwitchUser = (user: User) => {
     setCurrentUser(user);
     setIsMobilePOSMode(false);
-    const defaultView = user.role === "warehouse_manager"
-      ? "inventory"
-      : user.role === "cashier" || user.role === "salesperson"
-      ? "pos"
-      : "dashboard";
-    setActiveView(defaultView);
+    setActiveView(defaultViewForRole(user.role));
   };
+
+  const navigateTo = useCallback((view: string) => {
+    setActiveView(ROLE_VIEW_ACCESS[currentUser.role].includes(view) ? view : defaultViewForRole(currentUser.role));
+  }, [currentUser.role]);
 
   const handleLoginUser = async (user: User) => {
     if (activeSession) await api.endStaffSession(activeSession.id);
@@ -335,7 +382,7 @@ export default function App() {
 
   // When an item is scanned from anywhere (e.g. global camera modal)
   const handleScannedProduct = (product: Product) => {
-    setActiveView("pos");
+    if (ROLE_VIEW_ACCESS[currentUser.role].includes("pos")) setActiveView("pos");
     // Handled via state or directly passed
   };
 
@@ -384,7 +431,7 @@ export default function App() {
         onSyncOffline={handleSyncOffline}
         isSyncing={isSyncing}
         activeView={activeView}
-        onNavigate={setActiveView}
+        onNavigate={navigateTo}
         isMobilePOSMode={isMobilePOSMode}
         onToggleMobileMode={() => setIsMobilePOSMode(!isMobilePOSMode)}
         notifications={notifications}
@@ -398,7 +445,7 @@ export default function App() {
           <div className="hidden md:flex">
             <Sidebar
               activeView={activeView}
-              onNavigate={setActiveView}
+              onNavigate={navigateTo}
               userRole={currentUser.role}
               isCollapsed={isSidebarCollapsed}
               onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
@@ -427,7 +474,7 @@ export default function App() {
               settings={settings}
               products={products}
               recentSales={sales}
-              onNavigate={setActiveView}
+              onNavigate={navigateTo}
               onOpenScanner={() => setIsScannerOpen(true)}
               onRefresh={loadData}
               isLoading={isLoading}
@@ -475,6 +522,7 @@ export default function App() {
               onCreatePurchase={handleCreatePurchase}
               onReceivePurchase={handleReceivePurchase}
               onDeletePurchase={handleDeletePurchase}
+              onUpdatePurchase={handleUpdatePurchase}
               onCreateProduct={handleCreateProduct}
             />
           )}
@@ -485,6 +533,10 @@ export default function App() {
               suppliers={suppliers}
               onCreateCustomer={handleCreateCustomer}
               onCreateSupplier={handleCreateSupplier}
+              onUpdateCustomer={handleUpdateCustomer}
+              onDeleteCustomer={handleDeleteCustomer}
+              onUpdateSupplier={handleUpdateSupplier}
+              onDeleteSupplier={handleDeleteSupplier}
             />
           )}
 
@@ -497,7 +549,7 @@ export default function App() {
             />
           )}
 
-          {activeView === "ai" && <AIAssistantView currentUser={currentUser} onNavigate={setActiveView} />}
+          {activeView === "ai" && <AIAssistantView currentUser={currentUser} onNavigate={navigateTo} />}
 
           {activeView === "audit" && <AuditLogsView logs={auditLogs} />}
 
@@ -518,7 +570,7 @@ export default function App() {
       {/* Mobile Touch Bottom Nav */}
       <MobileBottomNav
         activeView={activeView}
-        onNavigate={setActiveView}
+        onNavigate={navigateTo}
         onOpenScanner={() => setIsScannerOpen(true)}
         userRole={currentUser.role}
       />

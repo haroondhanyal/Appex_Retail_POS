@@ -23,6 +23,7 @@ import { api } from "../services/api";
 const STAFF_ROLE_OPTIONS: { role: Role; description: string; access: string }[] = [
   { role: "cashier", description: "Runs checkout, scans products, and manages receipts.", access: "POS, receipts, AI Copilot" },
   { role: "salesperson", description: "Helps customers and completes counter sales.", access: "POS, receipts, AI Copilot" },
+  { role: "sales_agent", description: "Assists customers with product discovery and counter sales.", access: "POS, own receipts, AI Copilot" },
   { role: "manager", description: "Operates the store, catalogue, purchasing, and reports.", access: "Operational portal" },
   { role: "warehouse_manager", description: "Controls stock, expiry, adjustments, and inbound deliveries.", access: "Warehouse portal" },
   { role: "admin", description: "Owns full access, configuration, audit records, and staff control.", access: "All portals" }

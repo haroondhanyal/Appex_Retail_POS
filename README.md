@@ -7,11 +7,13 @@ The project uses a React/Vite frontend with an Express API. Demo and local data 
 ## Highlights
 
 - Fast POS checkout with product search, category filters, barcode lookup, item/cart discounts, tax calculation, held carts, receipt export/sharing, and receipt-only print/PDF output.
+- Receipt printing supports 80mm thermal slips and a branded A4 tax-invoice layout with an Apex Retail mark, subtle watermark, customer details, totals, and a personalised thank-you note.
 - Cash, card, bank transfer, digital-wallet, and split-payment workflows.
 - Product catalogue with SKU, barcode, pricing, supplier, batch, stock threshold, and expiry details.
 - Inventory protection: low-stock alerts, negative-stock prevention, expiry blocking, batch-aware stock deduction, adjustments, disposal, and stock-movement history.
 - Purchase orders and receiving flow that updates inventory.
-- Customers, suppliers, role-based navigation, store settings, notifications, dashboard, sales reporting, P&L-oriented analytics, and audit logs.
+- Customer and supplier directory with profile pictures, camera/file upload, searchable customer types, delivery/corporate/wholesale details, and edit/remove controls.
+- Role-based portals for admin, manager, warehouse manager, cashier, salesperson, and sales agent.
 - Offline sale queue in browser storage with automatic/manual synchronization when connectivity returns.
 - Private, local-first AI Retail Copilot for conversational business intelligence; Gemini is an opt-in provider only.
 - Responsive desktop and mobile POS layouts, native-camera barcode scanner, keyboard shortcuts (`F2` POS and `F4` scanner), themes, and optional sound effects.
@@ -60,6 +62,10 @@ Offline browser? -> queue sale in localStorage -> reconnect -> /api/sync -> pers
 3. Staff can log stock adjustments and dispose of expired goods; each action is retained in stock movements and audit history.
 4. Purchase orders are created for suppliers. Receiving an order adds stock, creates batches where applicable, and records the corresponding movement.
 
+### Suppliers and vendors
+
+The **Directory** screen includes a working **Suppliers & Vendors** tab. Each vendor shows company/contact details, phone, email, address, supplied categories, and outstanding payable balance. Admins and managers can add supplier partners with all of these details; they then become available when creating inbound purchase orders.
+
 ### Roles and access
 
 Each account opens a role-specific portal. Navigation is filtered by the selected user's role:
@@ -68,18 +74,25 @@ Each account opens a role-specific portal. Navigation is filtered by the selecte
 | --- | --- | --- |
 | Admin | Full store control, staff accounts, role assignment, activation/deactivation, removal, audit logs, settings, reporting, inventory, and POS | All modules |
 | Manager | Day-to-day store operations, products, inventory, purchasing, customers, sales, reporting, and POS | All operational modules; no staff-account control or audit log |
-| Warehouse Manager | Check all product stock, expiry status, stock movements, adjustments, disposal, and inbound purchase orders | Warehouse Stock Control, Inbound POs, AI Copilot |
+| Warehouse Manager | Check product stock, expiry status, stock movements, adjustments, and disposal | Warehouse Stock Control only |
 | Cashier | Scan items, process checkout, manage own sales/receipts, and use the AI Copilot | POS, Sales & Receipts, AI Copilot |
-| Salesperson / POS Assistant | Help customers at the counter, process sales, reprint receipts, and use the AI Copilot | POS, Sales & Receipts, AI Copilot |
+| Salesperson / POS Assistant | Help customers at the counter, process sales, reprint their own receipts, and use the AI Copilot | POS, own Sales & Receipts, AI Copilot |
+| Sales Agent | Assist customers with product discovery and counter sales, then access only their own receipts | POS, own Sales & Receipts, AI Copilot |
 
 ### Staff-account workflow
 
 1. An admin opens **Admin & Staff Control**.
-2. Choose a portal card (Cashier, Sales Assistant, Manager, Warehouse, or Admin) to start a role-preselected staff account, or select **Add Staff User**.
+2. Choose a portal card (Cashier, Salesperson, Sales Agent, Manager, Warehouse, or Admin) to start a role-preselected staff account, or select **Add Staff User**.
 3. Enter the name, username, email/phone, and portal role. The role selector explains the access the new staff member will receive.
 4. The account appears in the staff table and can be switched to from the header in this local/demo build.
 5. Admins can activate/deactivate staff access or permanently remove an account. The system prevents removal of the final active admin.
-6. When a user switches portal, the app automatically opens their default workspace: warehouse managers open stock control; cashiers and sales assistants open POS; managers/admins open the dashboard.
+6. When a user switches portal, the app automatically opens their default workspace: warehouse managers open stock control; cashiers, salespeople, and sales agents open POS; managers/admins open the dashboard.
+
+Restricted portal views are guarded in the app: a cashier, salesperson, or sales agent cannot navigate to admin, warehouse, reporting, product, or staff-management screens; their sales ledger also filters to invoices created under their own staff ID. Refund controls are available only to admin and manager portals.
+
+### Customer and supplier profile images
+
+Managers and admins can add or edit an optional customer or supplier picture from **Directory**. The image control supports camera capture and image-file upload, compresses the image in the browser, and shows the saved image on the directory card. Customer records can also be classified as walk-in, registered, online, corporate, wholesale, or delivery; the selected type exposes the relevant delivery, tax, credit, or bulk-pricing fields.
 
 Dashboard KPI cards and AI insight cards are interactive: selecting a card opens its related sales, report, product, or warehouse workspace. Use **Refresh AI Insights** to reload the latest local analytics.
 
@@ -92,9 +105,20 @@ Dashboard KPI cards and AI insight cards are interactive: selecting a card opens
 
 > The included authentication endpoint and role controls are suitable for a local/demo foundation. Before production use, add password hashing, real session/token verification, authorization middleware, validation, a production database, and secure secret management.
 
-## AI Retail Copilot
+## AI Retail Intelligence Copilot
 
-The **AI Retail Intelligence & Copilot** screen accepts questions in natural language and presents automated risk/opportunity cards.
+The **AI Retail Intelligence Copilot** screen combines a natural-language assistant with four practical, clickable action cards. Its subtitle is: *Smart insights and proactive recommendations for your retail business*.
+
+### Recommended action cards
+
+| AI insight | Opens | Purpose |
+| --- | --- | --- |
+| 🔴 Immediate Stock Replenishment | Inventory | Low/out-of-stock items requiring immediate purchase |
+| 🟠 Perishable Inventory Expiry Warning | Inventory → Expiry | Items approaching expiry that need clearance or disposal planning |
+| 🟡 Slow-Moving / Unsold Inventory | Inventory → Stock Insights | Items with low or no sales that need a pricing or display review |
+| 🟢 Beverage & Snack Cross-Selling Potential | Sales → AI Recommendations | Product combinations that can increase basket value |
+
+Each card is always visible. It shows live local analysis when available, otherwise a clear no-risk/review message, and takes the user directly to the relevant workspace.
 
 ### What it can analyze
 

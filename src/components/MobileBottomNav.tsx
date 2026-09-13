@@ -15,12 +15,12 @@ export function MobileBottomNav({
   userRole
 }: MobileBottomNavProps) {
   const tabs = [
-    { id: "pos", label: "POS", icon: ShoppingBag, roles: ["admin", "manager", "cashier", "salesperson"] },
-    { id: "sales", label: "Sales", icon: Receipt, roles: ["admin", "manager", "cashier", "salesperson"] },
-    { id: "scan", label: "Scan", icon: Scan, isAction: true, roles: ["admin", "manager", "cashier", "salesperson"] },
+    { id: "pos", label: "POS", icon: ShoppingBag, roles: ["admin", "manager", "cashier", "salesperson", "sales_agent"] },
+    { id: "sales", label: "Sales", icon: Receipt, roles: ["admin", "manager", "cashier", "salesperson", "sales_agent"] },
+    { id: "scan", label: "Scan", icon: Scan, isAction: true, roles: ["admin", "manager", "cashier", "salesperson", "sales_agent"] },
     { id: "products", label: "Products", icon: Package, roles: ["admin", "manager"] },
     { id: "inventory", label: "Stock", icon: Package, roles: ["warehouse_manager"] },
-    { id: "ai", label: "AI Copilot", icon: Sparkles, roles: ["admin", "manager", "warehouse_manager", "cashier", "salesperson"] }
+    { id: "ai", label: "AI Copilot", icon: Sparkles, roles: ["admin", "manager", "cashier", "salesperson", "sales_agent"] }
   ];
 
   return (

@@ -17,6 +17,7 @@ import {
   Calendar,
   Layers,
   AlertCircle
+  ,Pencil
 } from "lucide-react";
 import { Purchase, Product, Supplier, User } from "../types";
 import { ImageCaptureUpload } from "./ImageCaptureUpload";
@@ -45,6 +46,7 @@ interface PurchasesViewProps {
   onCreatePurchase: (data: any) => Promise<void>;
   onReceivePurchase?: (id: string) => Promise<void>;
   onDeletePurchase?: (id: string) => Promise<void>;
+  onUpdatePurchase?: (id: string, data: Partial<Purchase>) => Promise<void>;
   onCreateProduct?: (data: Partial<Product>) => Promise<void>;
 }
 
@@ -56,6 +58,7 @@ export function PurchasesView({
   onCreatePurchase,
   onReceivePurchase,
   onDeletePurchase,
+  onUpdatePurchase,
   onCreateProduct
 }: PurchasesViewProps) {
   const [showNewPOModal, setShowNewPOModal] = useState(false);
@@ -108,6 +111,9 @@ export function PurchasesView({
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isReceivingAction, setIsReceivingAction] = useState(false);
+  const [isEditingPO, setIsEditingPO] = useState(false);
+  const [poEditNotes, setPoEditNotes] = useState("");
+  const [poEditSupplierId, setPoEditSupplierId] = useState("");
 
   // Summary Metrics
   const metrics = useMemo(() => {
@@ -379,6 +385,23 @@ export function PurchasesView({
     }
   };
 
+  const openPOEdit = (po: Purchase) => {
+    setPoEditNotes(po.notes || "");
+    setPoEditSupplierId(po.supplierId);
+    setIsEditingPO(true);
+  };
+
+  const handleUpdatePO = async () => {
+    if (!selectedPO || !onUpdatePurchase) return;
+    const supplier = suppliers.find(item => item.id === poEditSupplierId);
+    try {
+      await onUpdatePurchase(selectedPO.id, { supplierId: poEditSupplierId, supplierName: supplier?.name || selectedPO.supplierName, notes: poEditNotes });
+      setSelectedPO({ ...selectedPO, supplierId: poEditSupplierId, supplierName: supplier?.name || selectedPO.supplierName, notes: poEditNotes });
+      setIsEditingPO(false);
+      alert("Purchase order details updated.");
+    } catch (err: any) { alert(err.message || "Failed to update purchase order."); }
+  };
+
   return (
     <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-5 bg-neutral-50">
       {/* Header */}
@@ -514,7 +537,7 @@ export function PurchasesView({
                   return (
                     <tr
                       key={po.id}
-                      onClick={() => setSelectedPO(po)}
+                      onClick={() => { setIsEditingPO(false); setSelectedPO(po); }}
                       className="hover:bg-neutral-50/80 transition cursor-pointer group"
                     >
                       <td className="py-3.5 px-4 font-mono font-bold text-neutral-900 flex items-center gap-2">
@@ -628,6 +651,17 @@ export function PurchasesView({
                 </div>
               )}
 
+              {isEditingPO && selectedPO.status !== "received" && (
+                <div className="p-3 rounded-xl border border-blue-200 bg-blue-50 space-y-2">
+                  <div className="font-bold text-blue-900">Update PO Details</div>
+                  <select value={poEditSupplierId} onChange={e => setPoEditSupplierId(e.target.value)} className="w-full px-3 py-2 rounded-lg border border-blue-200 text-xs bg-white">
+                    {suppliers.map(supplier => <option key={supplier.id} value={supplier.id}>{supplier.name}</option>)}
+                  </select>
+                  <textarea value={poEditNotes} onChange={e => setPoEditNotes(e.target.value)} placeholder="PO notes" className="w-full px-3 py-2 rounded-lg border border-blue-200 text-xs min-h-16" />
+                  <div className="flex justify-end gap-2"><button onClick={() => setIsEditingPO(false)} className="px-3 py-1.5 text-xs font-bold text-neutral-600">Cancel</button><button onClick={handleUpdatePO} className="px-3 py-1.5 rounded-lg bg-blue-700 text-white text-xs font-bold">Save Changes</button></div>
+                </div>
+              )}
+
               {/* Items List */}
               <div className="border border-neutral-200 rounded-xl overflow-hidden">
                 <table className="w-full text-left">
@@ -718,7 +752,7 @@ export function PurchasesView({
             {/* Modal Footer */}
             <div className="p-4 bg-neutral-50 border-t border-neutral-200 flex items-center justify-between">
               <div>
-                {onDeletePurchase && (
+                {onDeletePurchase && selectedPO.status !== "received" && (
                   <button
                     onClick={() => handleDeletePO(selectedPO)}
                     className="text-xs text-red-600 hover:text-red-700 font-bold flex items-center gap-1"
@@ -730,6 +764,7 @@ export function PurchasesView({
               </div>
 
               <div className="flex items-center gap-2">
+                {selectedPO.status !== "received" && onUpdatePurchase && <button onClick={() => openPOEdit(selectedPO)} className="px-3 py-1.5 border border-blue-200 text-blue-700 rounded-xl text-xs font-bold hover:bg-blue-50 flex items-center gap-1.5"><Pencil className="w-3.5 h-3.5" />Edit PO</button>}
                 <button
                   onClick={() => window.print()}
                   className="px-3 py-1.5 border border-neutral-300 rounded-xl text-xs font-bold text-neutral-700 hover:bg-neutral-100 flex items-center gap-1.5 transition"

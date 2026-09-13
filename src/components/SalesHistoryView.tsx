@@ -43,8 +43,12 @@ export function SalesHistoryView({
   const [refundItems, setRefundItems] = useState<{ productId: string; quantity: number }[]>([]);
   const [isProcessingRefund, setIsProcessingRefund] = useState(false);
 
+  const canManageRefunds = currentUser.role === "admin" || currentUser.role === "manager";
+  const isOwnSalesPortal = currentUser.role === "cashier" || currentUser.role === "salesperson" || currentUser.role === "sales_agent";
+  const visibleSales = isOwnSalesPortal ? sales.filter(sale => sale.cashierId === currentUser.id) : sales;
+
   const filteredSales = useMemo(() => {
-    return sales.filter(s => {
+    return visibleSales.filter(s => {
       const matchSearch =
         !searchQuery ||
         s.invoiceNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -56,7 +60,7 @@ export function SalesHistoryView({
 
       return matchSearch && matchStatus && matchPayment;
     });
-  }, [sales, searchQuery, statusFilter, paymentFilter]);
+  }, [visibleSales, searchQuery, statusFilter, paymentFilter]);
 
   const openRefundDialog = (sale: Sale) => {
     setSelectedSale(sale);
@@ -92,16 +96,16 @@ export function SalesHistoryView({
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-xl sm:text-2xl font-black text-neutral-900 tracking-tight">
-            Sales Ledger & Refund Processing
+            {isOwnSalesPortal ? "My Sales & Receipts" : "Sales Ledger & Refund Processing"}
           </h1>
           <p className="text-xs text-neutral-500 mt-0.5">
-            Audit customer invoices, reprint thermal receipts, and issue inventory returns.
+            {isOwnSalesPortal ? "View and reprint only the receipts created from your POS account." : "Audit customer invoices, reprint thermal receipts, and issue inventory returns."}
           </p>
         </div>
 
         <div className="flex items-center gap-2">
           <div className="px-3 py-1.5 rounded-xl bg-white border border-neutral-200 text-xs font-mono font-bold text-neutral-800">
-            Total Sales: {sales.length}
+            Total Sales: {visibleSales.length}
           </div>
         </div>
       </div>
@@ -226,7 +230,7 @@ export function SalesHistoryView({
                           <Printer className="w-3.5 h-3.5" />
                         </button>
 
-                        {!isRefunded && (
+                        {canManageRefunds && !isRefunded && (
                           <button
                             onClick={() => openRefundDialog(sale)}
                             className="p-1.5 rounded-lg border border-neutral-200 text-amber-700 hover:bg-amber-50"

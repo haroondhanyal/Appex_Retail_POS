@@ -34,20 +34,21 @@ export function Sidebar({
   onOpenScanner
 }: SidebarProps) {
   const navItems = [
-    { id: "pos", label: "POS Checkout", icon: ShoppingBag, roles: ["admin", "manager", "cashier", "salesperson"] },
+    { id: "pos", label: "POS Checkout", icon: ShoppingBag, roles: ["admin", "manager", "cashier", "salesperson", "sales_agent"] },
     { id: "dashboard", label: "Store Dashboard", icon: LayoutDashboard, roles: ["admin", "manager"] },
     { id: "products", label: "Products & Barcodes", icon: Package, roles: ["admin", "manager"] },
     { id: "inventory", label: "Warehouse Stock Control", icon: AlertTriangle, roles: ["admin", "manager", "warehouse_manager"] },
-    { id: "sales", label: "Sales & Receipts", icon: Receipt, roles: ["admin", "manager", "cashier", "salesperson"] },
-    { id: "purchases", label: "Inbound POs", icon: Truck, roles: ["admin", "manager", "warehouse_manager"] },
+    { id: "sales", label: "Sales & Receipts", icon: Receipt, roles: ["admin", "manager", "cashier", "salesperson", "sales_agent"] },
+    { id: "purchases", label: "Inbound POs", icon: Truck, roles: ["admin", "manager"] },
     { id: "directory", label: "Directory", icon: Users, roles: ["admin", "manager"] },
     { id: "reports", label: "Analytics & P&L", icon: BarChart3, roles: ["admin", "manager"] },
-    { id: "ai", label: "AI Retail Copilot", icon: Sparkles, roles: ["admin", "manager", "warehouse_manager", "cashier", "salesperson"], highlight: true },
+    { id: "ai", label: "AI Retail Copilot", icon: Sparkles, roles: ["admin", "manager", "cashier", "salesperson", "sales_agent"], highlight: true },
     { id: "audit", label: "Security & Audit", icon: ShieldAlert, roles: ["admin"] },
     { id: "settings", label: "Admin & Staff Control", icon: Settings, roles: ["admin"] }
   ];
 
   const filteredItems = navItems.filter(item => item.roles.includes(userRole));
+  const canUseCheckout = ["admin", "manager", "cashier", "salesperson", "sales_agent"].includes(userRole);
 
   return (
     <aside
@@ -56,18 +57,20 @@ export function Sidebar({
       }`}
     >
       {/* Fast Scan Action Button */}
-      <div className="p-3 border-b border-neutral-100">
-        <button
-          onClick={onOpenScanner}
-          className={`w-full py-2.5 rounded-xl bg-neutral-900 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-xs hover:bg-neutral-800 transition ${
-            isCollapsed ? "px-0" : "px-3"
-          }`}
-          title="Open Native Barcode Scanner"
-        >
-          <Scan className="w-4 h-4 text-emerald-400 shrink-0" />
-          {!isCollapsed && <span>Quick Barcode Scan</span>}
-        </button>
-      </div>
+      {canUseCheckout && (
+        <div className="p-3 border-b border-neutral-100">
+          <button
+            onClick={onOpenScanner}
+            className={`w-full py-2.5 rounded-xl bg-neutral-900 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-xs hover:bg-neutral-800 transition ${
+              isCollapsed ? "px-0" : "px-3"
+            }`}
+            title="Open Native Barcode Scanner"
+          >
+            <Scan className="w-4 h-4 text-emerald-400 shrink-0" />
+            {!isCollapsed && <span>Quick Barcode Scan</span>}
+          </button>
+        </div>
+      )}
 
       {/* Navigation List */}
       <nav className="flex-1 overflow-y-auto p-2 space-y-1">

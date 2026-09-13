@@ -1,4 +1,4 @@
-export type Role = 'admin' | 'manager' | 'warehouse_manager' | 'cashier' | 'salesperson';
+export type Role = 'admin' | 'manager' | 'warehouse_manager' | 'cashier' | 'salesperson' | 'sales_agent';
 export type UserRole = Role;
 
 export const ROLE_LABELS: Record<Role, string> = {
@@ -6,7 +6,8 @@ export const ROLE_LABELS: Record<Role, string> = {
   manager: "Manager Portal",
   warehouse_manager: "Warehouse Portal",
   cashier: "Cashier Portal",
-  salesperson: "Sales Assistant Portal"
+  salesperson: "Salesperson Portal",
+  sales_agent: "Sales Agent Portal"
 };
 
 export interface User {
@@ -108,6 +109,12 @@ export interface Sale {
   customerId?: string;
   customerName?: string;
   customerPhone?: string;
+  customerType?: CustomerType;
+  orderNumber?: string;
+  orderStatus?: OnlineOrderStatus;
+  deliveryAddress?: string;
+  deliveryCharge?: number;
+  riderName?: string;
   items: {
     productId: string;
     productName: string;
@@ -222,6 +229,9 @@ export interface StockMovement {
   reason: string;
 }
 
+export type CustomerType = "walk_in" | "registered" | "online" | "corporate" | "wholesale" | "delivery";
+export type OnlineOrderStatus = "pending" | "confirmed" | "packed" | "shipped" | "delivered";
+
 export interface Customer {
   id: string;
   name: string;
@@ -235,6 +245,18 @@ export interface Customer {
   visitCount: number;
   points?: number;
   lastPurchaseDate?: string;
+  customerType?: CustomerType;
+  companyName?: string;
+  taxNumber?: string;
+  creditTerms?: string;
+  wholesaleDiscountPercent?: number;
+  minimumOrderQuantity?: number;
+  priceListName?: string;
+  deliveryAddress?: string;
+  deliveryCharge?: number;
+  preferredPaymentMethod?: PaymentMethod;
+  defaultOrderStatus?: OnlineOrderStatus;
+  photo?: string;
 }
 
 export interface Supplier {
@@ -249,6 +271,7 @@ export interface Supplier {
   balance?: number;
   totalPurchased: number;
   categories?: string[];
+  photo?: string;
 }
 
 export interface AuditLog {
