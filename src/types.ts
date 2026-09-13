@@ -372,3 +372,8 @@ export interface AIInsight {
   category?: string;
   metric?: string;
 }
+
+export interface AIForecast { productId: string; productName: string; currentStock: number; predicted14DayDemand: number; expectedStockoutDays: number | null; recommendedReorder: number; confidence: "high" | "medium" | "low"; }
+export interface AIAction { id: string; type: "replenishment" | "markdown" | "risk_review"; title: string; reason: string; impact: string; status: "pending" | "approved" | "completed" | "dismissed"; productIds?: string[]; createdAt: string; }
+export interface AIBriefing { yesterdaySales: number; lowStockCount: number; expiryRiskCount: number; slowMovingCount: number; crossSellCount: number; actions: string[]; }
+export interface RiskIndicator { id: string; level: "high" | "medium" | "low"; title: string; user: string; reason: string; timestamp: string; referenceId?: string; }

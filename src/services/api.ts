@@ -33,6 +33,13 @@ export const api = {
     return res.json();
   },
 
+  async getAIBriefing() { const res = await fetch("/api/ai/briefing"); if (!res.ok) throw new Error("Failed to load AI briefing"); return res.json(); },
+  async getAIForecasts() { const res = await fetch("/api/ai/forecasts"); if (!res.ok) throw new Error("Failed to load forecasts"); return res.json(); },
+  async getAIRisks() { const res = await fetch("/api/ai/risks"); if (!res.ok) throw new Error("Failed to load risk indicators"); return res.json(); },
+  async getAIActions() { const res = await fetch("/api/ai/actions"); if (!res.ok) throw new Error("Failed to load AI actions"); return res.json(); },
+  async executeAIAction(id: string, user: User) { const res = await fetch(`/api/ai/actions/${id}/execute`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ userId: user.id, userName: user.name }) }); if (!res.ok) throw new Error((await res.json()).error || "AI action failed"); return res.json(); },
+  async dismissAIAction(id: string, user: User) { const res = await fetch(`/api/ai/actions/${id}/dismiss`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ userId: user.id, userName: user.name }) }); if (!res.ok) throw new Error("Unable to dismiss AI action"); return res.json(); },
+
   async requestPasswordReset(identifier: string): Promise<{ message: string }> {
     const res = await fetch("/api/auth/forgot-password", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ identifier }) });
     if (!res.ok) throw new Error((await res.json()).error || "Unable to submit request");

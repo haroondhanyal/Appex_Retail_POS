@@ -133,6 +133,31 @@ The **AI Retail Intelligence Copilot** screen combines a natural-language assist
 
 Each card is always visible. It shows live local analysis when available, otherwise a clear no-risk/review message, and takes the user directly to the relevant workspace.
 
+### Next-generation AI operating flow
+
+The Copilot is an action-assisted operating workspace, not only a reporting screen. It uses the same product, sales, purchase, customer, inventory, notification, and audit data used by the POS.
+
+| Capability | What it does | Control |
+| --- | --- | --- |
+| Daily AI Business Briefing | Summarises yesterday's sales, replenishment, expiry risk, slow-moving stock, and cross-sell opportunities. | Read-only insight |
+| Demand Forecast | Estimates 14-day product demand, stockout timing, recommended reorder quantity, and confidence from recorded sales and stock data. | Recommendation only |
+| AI Replenishment Action | Converts low-stock forecast recommendations into a pending purchase-order action. | Admin/manager must select **Approve & Execute**; resulting PO and action are audited |
+| Inventory Intelligence | Highlights replenishment, expiry, slow-moving/unsold stock, and cross-selling opportunities. | Opens the relevant operational workspace |
+| AI Risk & Anomaly Center | Presents refund and large inventory-adjustment patterns as review indicators, never as accusations. | Human review required |
+| Cross-selling | Identifies beverage/snack basket opportunities through the existing local rules engine. | Recommendation only |
+
+AI safety follows a strict workflow for sensitive operations:
+
+```text
+AI recommendation → human confirmation → execution → audit log
+```
+
+The AI cannot silently create a purchase order, change a price, refund a sale, adjust stock, or alter account permissions. The implemented replenishment action creates an **ordered** PO only after confirmation; receiving it remains the normal purchasing workflow and is what updates stock.
+
+### Unified retail records
+
+POS sales, online/delivery customer fields, purchase orders, suppliers, stock movements, loyalty points, notifications, offline sale sync, receipt history, and audit events share the local JSON data store. Customer profiles support walk-in, registered, online, corporate, wholesale, and delivery flows. Delivery/customer order references are retained with the sale record, keeping checkout, customer history, payment, and inventory activity synchronized.
+
 ## Authentication and account approval
 
 The application uses a role-checked sign-in flow:

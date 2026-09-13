@@ -9,7 +9,7 @@ import {
   Package,
   RefreshCw
 } from "lucide-react";
-import { AIInsight, User } from "../types";
+import { AIAction, AIBriefing, AIForecast, AIInsight, RiskIndicator, User } from "../types";
 import { api } from "../services/api";
 
 interface AIAssistantViewProps {
@@ -38,6 +38,10 @@ export function AIAssistantView({ currentUser, onNavigate }: AIAssistantViewProp
   const [isTyping, setIsTyping] = useState(false);
   const [insights, setInsights] = useState<AIInsight[]>([]);
   const [isLoadingInsights, setIsLoadingInsights] = useState(false);
+  const [briefing, setBriefing] = useState<AIBriefing | null>(null);
+  const [forecasts, setForecasts] = useState<AIForecast[]>([]);
+  const [actions, setActions] = useState<AIAction[]>([]);
+  const [risks, setRisks] = useState<RiskIndicator[]>([]);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -51,13 +55,18 @@ export function AIAssistantView({ currentUser, onNavigate }: AIAssistantViewProp
   const fetchInsights = async () => {
     setIsLoadingInsights(true);
     try {
-      const data = await api.getAIInsights();
-      setInsights(data);
+      const [data, nextBriefing, nextForecasts, nextActions, nextRisks] = await Promise.all([api.getAIInsights(), api.getAIBriefing(), api.getAIForecasts(), api.getAIActions(), api.getAIRisks()]);
+      setInsights(data); setBriefing(nextBriefing); setForecasts(nextForecasts); setActions(nextActions); setRisks(nextRisks);
     } catch (e) {
       console.warn("Failed to fetch insights", e);
     } finally {
       setIsLoadingInsights(false);
     }
+  };
+
+  const executeAction = async (action: AIAction) => {
+    if (!window.confirm(`Approve AI action?\n\n${action.title}\n${action.impact}`)) return;
+    try { await api.executeAIAction(action.id, currentUser); fetchInsights(); } catch (error: any) { alert(error.message); }
   };
 
   const handleSendMessage = async (textToSend?: string) => {
@@ -142,6 +151,8 @@ export function AIAssistantView({ currentUser, onNavigate }: AIAssistantViewProp
       </div>
 
       {/* Four recommended AI actions */}
+      {briefing && <section className="rounded-2xl bg-neutral-900 p-4 text-white shadow-sm"><div className="flex items-center justify-between gap-3"><div><h2 className="font-black text-base">Good Morning 👋 Daily AI Business Briefing</h2><p className="text-xs text-neutral-300 mt-1">A live summary of sales, inventory risks, and recommended actions.</p></div><span className="text-xs font-bold text-emerald-300">Local & Private</span></div><div className="grid grid-cols-2 md:grid-cols-5 gap-3 mt-4">{[["Yesterday Sales", `$${briefing.yesterdaySales.toFixed(2)}`],["Replenishment", briefing.lowStockCount],["Expiry Risks", briefing.expiryRiskCount],["Slow Moving", briefing.slowMovingCount],["Cross-Sell Ideas", briefing.crossSellCount]].map(([label,value]) => <div key={String(label)} className="rounded-xl bg-white/10 p-3"><span className="text-[10px] uppercase text-neutral-300 font-bold">{label}</span><strong className="block text-lg mt-1">{value}</strong></div>)}</div></section>}
+      {actions.filter(action => action.status === "pending").length > 0 && <section className="rounded-2xl border border-blue-200 bg-blue-50 p-4"><h2 className="font-black text-sm text-neutral-900">AI Actions — confirmation required</h2><div className="grid md:grid-cols-2 gap-3 mt-3">{actions.filter(action => action.status === "pending").map(action => <div key={action.id} className="rounded-xl bg-white border border-blue-100 p-3"><h3 className="font-bold text-sm">{action.title}</h3><p className="text-xs text-neutral-600 mt-1">{action.reason}</p><p className="text-xs font-bold text-blue-800 mt-2">{action.impact}</p><div className="flex gap-2 mt-3"><button onClick={() => executeAction(action)} className="rounded-lg bg-neutral-900 px-3 py-1.5 text-xs font-bold text-white">Approve & Execute</button><button onClick={() => api.dismissAIAction(action.id, currentUser).then(fetchInsights)} className="rounded-lg border px-3 py-1.5 text-xs font-bold">Dismiss</button></div></div>)}</div></section>}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3 shrink-0">
         {recommendedCards.map(card => {
           const ins = insights.find(item => item.type === card.type);
@@ -167,6 +178,8 @@ export function AIAssistantView({ currentUser, onNavigate }: AIAssistantViewProp
           );
         })}
       </div>
+
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4"><section className="rounded-2xl border border-neutral-200 bg-white p-4"><h2 className="font-black text-sm">Demand Forecast — next 14 days</h2><div className="mt-3 space-y-2 max-h-64 overflow-y-auto">{forecasts.slice(0, 6).map(forecast => <div key={forecast.productId} className="flex justify-between gap-3 rounded-xl bg-neutral-50 p-2.5 text-xs"><div><strong>{forecast.productName}</strong><p className="text-neutral-500 mt-1">Stock {forecast.currentStock} · demand {forecast.predicted14DayDemand} · {forecast.expectedStockoutDays === null ? "no stockout forecast" : `stockout in ${forecast.expectedStockoutDays} days`}</p></div><span className="font-black text-red-700">Reorder {forecast.recommendedReorder}</span></div>)}</div></section><section className="rounded-2xl border border-neutral-200 bg-white p-4"><h2 className="font-black text-sm">AI Risk & Anomaly Center</h2><div className="mt-3 space-y-2">{risks.length ? risks.map(risk => <div key={risk.id} className="rounded-xl border border-amber-200 bg-amber-50 p-2.5 text-xs"><strong>{risk.title}</strong><p className="text-neutral-600 mt-1">{risk.user} · {risk.reason}</p><span className="text-[10px] text-neutral-500">Indicator only — human review required.</span></div>) : <p className="text-xs text-neutral-500">No unusual risk indicators detected.</p>}</div></section></div>
 
       {/* Main Chat Interface */}
       <div className="flex-1 bg-white rounded-2xl border border-neutral-200 shadow-2xs flex flex-col overflow-hidden min-h-[380px]">

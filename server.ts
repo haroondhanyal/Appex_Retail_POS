@@ -892,7 +892,8 @@ let db = {
   auditLogs: INITIAL_AUDIT,
   sessions: [] as any[],
   notifications: INITIAL_NOTIFICATIONS,
-  settings: INITIAL_SETTINGS
+  settings: INITIAL_SETTINGS,
+  aiActions: [] as any[]
 };
 
 function loadDb() {
@@ -903,6 +904,7 @@ function loadDb() {
       if (parsed.products && parsed.products.length > 0) {
         db = parsed;
         if (!Array.isArray((db as any).sessions)) (db as any).sessions = [];
+        if (!Array.isArray((db as any).aiActions)) (db as any).aiActions = [];
         (db as any).suppliers = (db as any).suppliers.map((supplier: any) => ({
           ...supplier,
           company: supplier.company || supplier.name,
@@ -2330,6 +2332,50 @@ function fallbackAIQuery(query: string) {
 }
 
 // AI Business Insights Generator
+function getForecasts() {
+  return db.products.map(product => {
+    const sold = db.sales.flatMap(sale => sale.items).filter((item: any) => item.productId === product.id).reduce((sum: number, item: any) => sum + Number(item.quantity || 0), 0);
+    const dailyVelocity = sold > 0 ? sold / Math.max(7, db.sales.length ? 14 : 7) : Math.max(0.2, product.minStock / 30);
+    const predicted14DayDemand = Math.max(1, Math.ceil(dailyVelocity * 14));
+    const expectedStockoutDays = dailyVelocity > 0 ? Math.max(0, Math.floor(product.currentStock / dailyVelocity)) : null;
+    return { productId: product.id, productName: product.name, currentStock: product.currentStock, predicted14DayDemand, expectedStockoutDays, recommendedReorder: Math.max(0, predicted14DayDemand + product.minStock - product.currentStock), confidence: sold >= 20 ? "high" : sold > 0 ? "medium" : "low" };
+  }).sort((a, b) => b.recommendedReorder - a.recommendedReorder);
+}
+
+function getAIActions() {
+  const actions = (db as any).aiActions as any[];
+  const low = getForecasts().filter(item => item.recommendedReorder > 0 && item.currentStock <= db.products.find(p => p.id === item.productId)!.minStock);
+  if (low.length && !actions.some(action => action.type === "replenishment" && action.status === "pending")) actions.unshift({ id: "ai-replenish-" + Date.now(), type: "replenishment", title: "Create replenishment purchase order", reason: `${low.length} products are at or below their reorder level.`, impact: `Suggested replenishment: ${low.reduce((sum, item) => sum + item.recommendedReorder, 0)} units.`, productIds: low.map(item => item.productId), status: "pending", createdAt: new Date().toISOString() });
+  return actions;
+}
+
+app.get("/api/ai/briefing", (_req: Request, res: Response) => {
+  const yesterday = new Date(); yesterday.setDate(yesterday.getDate() - 1); const key = yesterday.toISOString().split("T")[0];
+  const yesterdaySales = db.sales.filter(sale => sale.timestamp.startsWith(key) && sale.status === "completed").reduce((sum, sale) => sum + Number(sale.grandTotal || 0), 0);
+  const expiryRiskCount = db.products.filter(product => ["expired", "expiring_soon"].includes(calculateExpiryStatus(product.expiryDate))).length;
+  const slowMovingCount = db.products.filter(product => !db.sales.some(sale => sale.items.some((item: any) => item.productId === product.id)) && product.currentStock > 0).length;
+  res.json({ yesterdaySales, lowStockCount: db.products.filter(product => product.currentStock <= product.minStock).length, expiryRiskCount, slowMovingCount, crossSellCount: 1, actions: ["Review replenishment recommendations", "Clear expiry-risk inventory", "Review slow-moving stock"] });
+});
+
+app.get("/api/ai/forecasts", (_req: Request, res: Response) => res.json(getForecasts().slice(0, 12)));
+
+app.get("/api/ai/risks", (_req: Request, res: Response) => {
+  const refundsByUser: Record<string, number> = {}; db.refunds.forEach((refund: any) => refundsByUser[refund.cashierId] = (refundsByUser[refund.cashierId] || 0) + 1);
+  const risks = Object.entries(refundsByUser).filter(([, count]) => count >= 3).map(([userId, count]) => { const user = db.users.find(item => item.id === userId); return { id: `risk-refund-${userId}`, level: "medium", title: "Unusual refund activity", user: user?.name || "Unknown user", reason: `${count} refunds recorded; review before taking action.`, timestamp: new Date().toISOString(), referenceId: userId }; });
+  db.stockMovements.filter(movement => Math.abs(movement.changeQty) > 50 && movement.type === "adjustment").forEach(movement => risks.push({ id: `risk-stock-${movement.id}`, level: "medium", title: "Large inventory adjustment", user: movement.userName, reason: `${movement.productName}: ${movement.changeQty} units adjusted.`, timestamp: movement.date, referenceId: movement.id }));
+  res.json(risks);
+});
+
+app.get("/api/ai/actions", (_req: Request, res: Response) => res.json(getAIActions()));
+
+app.post("/api/ai/actions/:id/execute", (req: Request, res: Response) => {
+  const action = getAIActions().find(action => action.id === req.params.id); if (!action || action.status !== "pending") return res.status(404).json({ error: "Pending AI action not found" });
+  if (action.type === "replenishment") { const supplier = db.suppliers[0]; if (!supplier) return res.status(400).json({ error: "Add a supplier before creating a purchase order" }); const forecasts = getForecasts(); const items = action.productIds.map((productId: string) => { const product = db.products.find(p => p.id === productId)!; const forecast = forecasts.find(item => item.productId === productId)!; return { productId, productName: product.name, sku: product.sku, quantity: forecast.recommendedReorder, costPrice: product.costPrice, taxRate: 0, discountPercent: 0, lineTotal: forecast.recommendedReorder * product.costPrice }; }); const subtotal = items.reduce((sum: number, item: any) => sum + item.lineTotal, 0); const po = { id: "po-ai-" + Date.now(), poNumber: `PO-${new Date().getFullYear()}-AI-${String(db.purchases.length + 1).padStart(4, "0")}`, supplierId: supplier.id, supplierName: supplier.name, date: new Date().toISOString(), items, subtotal, taxTotal: 0, grandTotal: subtotal, status: "ordered", notes: `Created from approved AI recommendation: ${action.title}`, createdAt: new Date().toISOString() }; db.purchases.push(po); action.status = "completed"; logAudit(req.body.userId || "admin", req.body.userName || "Admin", "admin", "AI_ACTION_EXECUTED", "Purchase", po.poNumber, `Approved and created ${po.poNumber} from AI replenishment recommendation`); saveDb(); return res.json({ action, purchase: po }); }
+  action.status = "completed"; logAudit(req.body.userId || "admin", req.body.userName || "Admin", "admin", "AI_ACTION_EXECUTED", "AI", action.id, action.title); saveDb(); res.json({ action });
+});
+
+app.post("/api/ai/actions/:id/dismiss", (req: Request, res: Response) => { const action = getAIActions().find(action => action.id === req.params.id); if (!action) return res.status(404).json({ error: "AI action not found" }); action.status = "dismissed"; logAudit(req.body.userId || "admin", req.body.userName || "Admin", "admin", "AI_ACTION_DISMISSED", "AI", action.id, action.title); saveDb(); res.json(action); });
+
 app.get("/api/ai/insights", (req: Request, res: Response) => {
   const insights = [];
 
