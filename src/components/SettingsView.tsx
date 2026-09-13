@@ -12,7 +12,8 @@ import {
   Edit,
   Save,
   Palette,
-  Check
+  Check,
+  Trash2
 } from "lucide-react";
 import { SystemSettings, User, ThemeType } from "../types";
 
@@ -157,6 +158,7 @@ interface SettingsViewProps {
   onUpdateSettings: (newSettings: Partial<SystemSettings>) => Promise<void>;
   onCreateUser: (data: Partial<User>) => Promise<void>;
   onUpdateUser: (id: string, data: Partial<User>) => Promise<void>;
+  onDeleteUser: (id: string) => Promise<void>;
 }
 
 export function SettingsView({
@@ -165,7 +167,8 @@ export function SettingsView({
   currentUser,
   onUpdateSettings,
   onCreateUser,
-  onUpdateUser
+  onUpdateUser,
+  onDeleteUser
 }: SettingsViewProps) {
   const [formData, setFormData] = useState<SystemSettings>({ ...settings });
   const [isSaving, setIsSaving] = useState(false);
@@ -217,6 +220,19 @@ export function SettingsView({
       await onUpdateUser(user.id, { active: !user.active });
     } catch (err: any) {
       alert(err.message || "Failed to toggle user status");
+    }
+  };
+
+  const handleDeleteUser = async (user: User) => {
+    if (user.id === currentUser.id) {
+      alert("You cannot remove the account currently using this portal.");
+      return;
+    }
+    if (!window.confirm(`Remove ${user.name}'s staff account? This cannot be undone.`)) return;
+    try {
+      await onDeleteUser(user.id);
+    } catch (err: any) {
+      alert(err.message || "Failed to remove staff account");
     }
   };
 
@@ -611,6 +627,14 @@ export function SettingsView({
                     >
                       {u.active ? "Deactivate" : "Activate"}
                     </button>
+                    <button
+                      onClick={() => handleDeleteUser(u)}
+                      disabled={u.id === currentUser.id}
+                      className="ml-1 p-1.5 rounded-lg text-red-600 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-30"
+                      title="Remove staff account"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
                   </td>
                 </tr>
               ))}
@@ -659,7 +683,9 @@ export function SettingsView({
                 >
                   <option value="cashier">Cashier</option>
                   <option value="manager">Manager</option>
+                  <option value="warehouse_manager">Warehouse Manager</option>
                   <option value="admin">Admin / Owner</option>
+                  <option value="salesperson">Salesperson / POS Assistant</option>
                 </select>
               </div>
               <div>

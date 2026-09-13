@@ -1,5 +1,13 @@
-export type Role = 'admin' | 'manager' | 'cashier';
+export type Role = 'admin' | 'manager' | 'warehouse_manager' | 'cashier' | 'salesperson';
 export type UserRole = Role;
+
+export const ROLE_LABELS: Record<Role, string> = {
+  admin: "Admin Portal",
+  manager: "Manager Portal",
+  warehouse_manager: "Warehouse Portal",
+  cashier: "Cashier Portal",
+  salesperson: "Sales Assistant Portal"
+};
 
 export interface User {
   id: string;

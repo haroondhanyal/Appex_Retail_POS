@@ -62,14 +62,23 @@ Offline browser? -> queue sale in localStorage -> reconnect -> /api/sync -> pers
 
 ### Roles and access
 
-Navigation is filtered by the selected user's role:
+Each account opens a role-specific portal. Navigation is filtered by the selected user's role:
 
-| Area | Admin | Manager | Cashier |
-| --- | :---: | :---: | :---: |
-| POS checkout and sales history | Yes | Yes | Yes |
-| Dashboard, products, inventory, purchasing, directory, reports, settings | Yes | Yes | — |
-| AI Retail Copilot | Yes | Yes | Yes |
-| Audit log | Yes | — | — |
+| Portal | Main responsibilities | Access |
+| --- | --- | --- |
+| Admin | Full store control, staff accounts, role assignment, activation/deactivation, removal, audit logs, settings, reporting, inventory, and POS | All modules |
+| Manager | Day-to-day store operations, products, inventory, purchasing, customers, sales, reporting, and POS | All operational modules; no staff-account control or audit log |
+| Warehouse Manager | Check all product stock, expiry status, stock movements, adjustments, disposal, and inbound purchase orders | Warehouse Stock Control, Inbound POs, AI Copilot |
+| Cashier | Scan items, process checkout, manage own sales/receipts, and use the AI Copilot | POS, Sales & Receipts, AI Copilot |
+| Salesperson / POS Assistant | Help customers at the counter, process sales, reprint receipts, and use the AI Copilot | POS, Sales & Receipts, AI Copilot |
+
+### Staff-account workflow
+
+1. An admin opens **Admin & Staff Control**.
+2. Select **Add Staff User**, enter the name, username, contact details, and portal role.
+3. The account appears in the staff table and can be switched to from the header in this local/demo build.
+4. Admins can activate/deactivate staff access or permanently remove an account. The system prevents removal of the final active admin.
+5. When a user switches portal, the app automatically opens their default workspace: warehouse managers open stock control; cashiers and sales assistants open POS; managers/admins open the dashboard.
 
 > The included authentication endpoint and role controls are suitable for a local/demo foundation. Before production use, add password hashing, real session/token verification, authorization middleware, validation, a production database, and secure secret management.
 

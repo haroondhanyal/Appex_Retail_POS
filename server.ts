@@ -13,6 +13,7 @@ const PORT = Number(process.env.PORT) || 3000;
 const configuredAiMode = process.env.AI_MODE?.toLowerCase();
 const AI_MODE: "local" | "auto" | "gemini" =
   configuredAiMode === "gemini" || configuredAiMode === "auto" ? configuredAiMode : "local";
+const ALLOWED_ROLES = new Set(["admin", "manager", "warehouse_manager", "cashier", "salesperson"]);
 
 app.use(express.json({ limit: "25mb" }));
 
@@ -973,6 +974,9 @@ app.post("/api/users", (req: Request, res: Response) => {
   if (!name || !username || !role) {
     return res.status(400).json({ error: "Name, username and role are required" });
   }
+  if (!ALLOWED_ROLES.has(role)) {
+    return res.status(400).json({ error: "Invalid staff role" });
+  }
   if (db.users.some(u => u.username.toLowerCase() === username.toLowerCase())) {
     return res.status(400).json({ error: "Username already exists" });
   }
@@ -999,13 +1003,30 @@ app.put("/api/users/:id", (req: Request, res: Response) => {
   if (!user) return res.status(404).json({ error: "User not found" });
   const { name, role, email, phone, active } = req.body;
   if (name) user.name = name;
-  if (role) user.role = role;
+  if (role) {
+    if (!ALLOWED_ROLES.has(role)) return res.status(400).json({ error: "Invalid staff role" });
+    user.role = role;
+  }
   if (email !== undefined) user.email = email;
   if (phone !== undefined) user.phone = phone;
   if (active !== undefined) user.active = active;
   logAudit("admin", "Admin", "admin", "USER_UPDATED", "User", user.id, `Updated user ${user.name}`);
   saveDb();
   res.json(user);
+});
+
+app.delete("/api/users/:id", (req: Request, res: Response) => {
+  const index = db.users.findIndex(u => u.id === req.params.id);
+  if (index === -1) return res.status(404).json({ error: "User not found" });
+  const user = db.users[index];
+  const activeAdmins = db.users.filter(u => u.role === "admin" && u.active);
+  if (user.role === "admin" && user.active && activeAdmins.length <= 1) {
+    return res.status(400).json({ error: "At least one active admin account must remain" });
+  }
+  db.users.splice(index, 1);
+  logAudit("admin", "Admin", "admin", "USER_REMOVED", "User", user.id, `Removed staff account ${user.name} (${user.role})`);
+  saveDb();
+  res.json({ message: "User removed", id: user.id });
 });
 
 // Products & Barcodes

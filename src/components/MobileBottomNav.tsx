@@ -1,27 +1,31 @@
 import { ShoppingBag, Scan, Receipt, Package, Sparkles } from "lucide-react";
+import { UserRole } from "../types";
 
 interface MobileBottomNavProps {
   activeView: string;
   onNavigate: (view: string) => void;
   onOpenScanner: () => void;
+  userRole: UserRole;
 }
 
 export function MobileBottomNav({
   activeView,
   onNavigate,
-  onOpenScanner
+  onOpenScanner,
+  userRole
 }: MobileBottomNavProps) {
   const tabs = [
-    { id: "pos", label: "POS", icon: ShoppingBag },
-    { id: "sales", label: "Sales", icon: Receipt },
-    { id: "scan", label: "Scan", icon: Scan, isAction: true },
-    { id: "products", label: "Products", icon: Package },
-    { id: "ai", label: "AI Copilot", icon: Sparkles }
+    { id: "pos", label: "POS", icon: ShoppingBag, roles: ["admin", "manager", "cashier", "salesperson"] },
+    { id: "sales", label: "Sales", icon: Receipt, roles: ["admin", "manager", "cashier", "salesperson"] },
+    { id: "scan", label: "Scan", icon: Scan, isAction: true, roles: ["admin", "manager", "cashier", "salesperson"] },
+    { id: "products", label: "Products", icon: Package, roles: ["admin", "manager"] },
+    { id: "inventory", label: "Stock", icon: Package, roles: ["warehouse_manager"] },
+    { id: "ai", label: "AI Copilot", icon: Sparkles, roles: ["admin", "manager", "warehouse_manager", "cashier", "salesperson"] }
   ];
 
   return (
     <nav className="md:hidden bg-white border-t border-neutral-200 fixed bottom-0 left-0 right-0 z-40 flex items-center justify-around py-1.5 px-2 select-none shadow-lg">
-      {tabs.map(tab => {
+      {tabs.filter(tab => tab.roles.includes(userRole)).map(tab => {
         const Icon = tab.icon;
         const isActive = activeView === tab.id;
 

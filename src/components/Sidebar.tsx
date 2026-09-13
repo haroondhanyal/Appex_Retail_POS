@@ -34,17 +34,17 @@ export function Sidebar({
   onOpenScanner
 }: SidebarProps) {
   const navItems = [
-    { id: "pos", label: "POS Checkout", icon: ShoppingBag, roles: ["admin", "manager", "cashier"] },
-    { id: "dashboard", label: "Dashboard", icon: LayoutDashboard, roles: ["admin", "manager"] },
+    { id: "pos", label: "POS Checkout", icon: ShoppingBag, roles: ["admin", "manager", "cashier", "salesperson"] },
+    { id: "dashboard", label: "Store Dashboard", icon: LayoutDashboard, roles: ["admin", "manager"] },
     { id: "products", label: "Products & Barcodes", icon: Package, roles: ["admin", "manager"] },
-    { id: "inventory", label: "Expiry & Stock Valuation", icon: AlertTriangle, roles: ["admin", "manager"] },
-    { id: "sales", label: "Sales & Receipts", icon: Receipt, roles: ["admin", "manager", "cashier"] },
-    { id: "purchases", label: "Inbound POs", icon: Truck, roles: ["admin", "manager"] },
+    { id: "inventory", label: "Warehouse Stock Control", icon: AlertTriangle, roles: ["admin", "manager", "warehouse_manager"] },
+    { id: "sales", label: "Sales & Receipts", icon: Receipt, roles: ["admin", "manager", "cashier", "salesperson"] },
+    { id: "purchases", label: "Inbound POs", icon: Truck, roles: ["admin", "manager", "warehouse_manager"] },
     { id: "directory", label: "Directory", icon: Users, roles: ["admin", "manager"] },
     { id: "reports", label: "Analytics & P&L", icon: BarChart3, roles: ["admin", "manager"] },
-    { id: "ai", label: "AI Retail Copilot", icon: Sparkles, roles: ["admin", "manager", "cashier"], highlight: true },
+    { id: "ai", label: "AI Retail Copilot", icon: Sparkles, roles: ["admin", "manager", "warehouse_manager", "cashier", "salesperson"], highlight: true },
     { id: "audit", label: "Security & Audit", icon: ShieldAlert, roles: ["admin"] },
-    { id: "settings", label: "Store Settings", icon: Settings, roles: ["admin", "manager"] }
+    { id: "settings", label: "Admin & Staff Control", icon: Settings, roles: ["admin"] }
   ];
 
   const filteredItems = navItems.filter(item => item.roles.includes(userRole));

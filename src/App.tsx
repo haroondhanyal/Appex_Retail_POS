@@ -249,6 +249,18 @@ export default function App() {
     api.getDashboardStats().then(setStats).catch(() => {});
   };
 
+  const handleReceivePurchase = async (id: string) => {
+    const received = await api.receivePurchase(id, { id: currentUser.id, name: currentUser.name });
+    setPurchases(prev => prev.map(purchase => (purchase.id === id ? received : purchase)));
+    api.getProducts().then(setProducts).catch(() => {});
+    api.getDashboardStats().then(setStats).catch(() => {});
+  };
+
+  const handleDeletePurchase = async (id: string) => {
+    await api.deletePurchase(id);
+    setPurchases(prev => prev.filter(purchase => purchase.id !== id));
+  };
+
   const handleCreateCustomer = async (data: Partial<Customer>) => {
     const newC = await api.createCustomer(data);
     setCustomers(prev => [...prev, newC]);
@@ -268,6 +280,22 @@ export default function App() {
     const updated = await api.updateUser(id, data);
     setUsers(prev => prev.map(u => (u.id === id ? updated : u)));
     if (currentUser.id === id) setCurrentUser(updated);
+  };
+
+  const handleDeleteUser = async (id: string) => {
+    await api.deleteUser(id);
+    setUsers(prev => prev.filter(user => user.id !== id));
+  };
+
+  const handleSwitchUser = (user: User) => {
+    setCurrentUser(user);
+    setIsMobilePOSMode(false);
+    const defaultView = user.role === "warehouse_manager"
+      ? "inventory"
+      : user.role === "cashier" || user.role === "salesperson"
+      ? "pos"
+      : "dashboard";
+    setActiveView(defaultView);
   };
 
   const handleUpdateSettings = async (newSettings: Partial<SystemSettings>) => {
@@ -329,7 +357,7 @@ export default function App() {
       <Header
         currentUser={currentUser}
         users={users}
-        onSwitchUser={setCurrentUser}
+        onSwitchUser={handleSwitchUser}
         settings={settings}
         onUpdateTheme={handleUpdateTheme}
         isOnline={isOnline}
@@ -426,6 +454,9 @@ export default function App() {
               suppliers={suppliers}
               currentUser={currentUser}
               onCreatePurchase={handleCreatePurchase}
+              onReceivePurchase={handleReceivePurchase}
+              onDeletePurchase={handleDeletePurchase}
+              onCreateProduct={handleCreateProduct}
             />
           )}
 
@@ -459,6 +490,7 @@ export default function App() {
               onUpdateSettings={handleUpdateSettings}
               onCreateUser={handleCreateUser}
               onUpdateUser={handleUpdateUser}
+              onDeleteUser={handleDeleteUser}
             />
           )}
         </main>
@@ -469,6 +501,7 @@ export default function App() {
         activeView={activeView}
         onNavigate={setActiveView}
         onOpenScanner={() => setIsScannerOpen(true)}
+        userRole={currentUser.role}
       />
 
       {/* Native Camera Barcode Scanner Modal */}

@@ -13,7 +13,7 @@ import {
   LogOut,
   ChevronDown
 } from "lucide-react";
-import { User, SystemSettings, ThemeType, NotificationItem } from "../types";
+import { User, SystemSettings, ThemeType, NotificationItem, ROLE_LABELS } from "../types";
 
 interface HeaderProps {
   currentUser: User;
@@ -317,7 +317,7 @@ export function Header({
             <div className="text-left leading-tight hidden sm:block">
               <div className="text-xs font-semibold text-neutral-900">{currentUser.name}</div>
               <div className="text-[10px] font-semibold text-neutral-500 uppercase tracking-wider">
-                {currentUser.role}
+                {ROLE_LABELS[currentUser.role]}
               </div>
             </div>
             <ChevronDown className="w-3.5 h-3.5 text-neutral-400" />
@@ -329,7 +329,7 @@ export function Header({
                 <div className="text-xs font-bold text-neutral-900">{currentUser.name}</div>
                 <div className="text-[11px] text-neutral-500">{currentUser.email}</div>
                 <span className="inline-block mt-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-neutral-100 text-neutral-800 uppercase">
-                  Role: {currentUser.role}
+                  {ROLE_LABELS[currentUser.role]}
                 </span>
               </div>
 
@@ -338,7 +338,7 @@ export function Header({
               </div>
 
               <div className="space-y-0.5">
-                {users.map(u => (
+                {users.filter(u => u.active).map(u => (
                   <button
                     key={u.id}
                     onClick={() => {

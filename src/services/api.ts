@@ -309,6 +309,14 @@ export const api = {
     return res.json();
   },
 
+  async deleteUser(id: string): Promise<void> {
+    const res = await fetch(`/api/users/${id}`, { method: "DELETE" });
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error || "Failed to remove user");
+    }
+  },
+
   // Dashboard & Reports
   async getDashboardStats(): Promise<DashboardStats> {
     const res = await fetch("/api/reports/dashboard");
