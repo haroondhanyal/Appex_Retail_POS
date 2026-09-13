@@ -149,6 +149,7 @@ export interface PurchaseItem {
   discountPercent: number;
   lineTotal: number;
   batchNumber?: string;
+  mfgDate?: string;
   expiryDate?: string;
 }
 

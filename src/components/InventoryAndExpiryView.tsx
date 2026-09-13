@@ -321,7 +321,7 @@ export function InventoryAndExpiryView({
 
   // Save Pending Thresholds
   const handleSaveAllThresholds = async () => {
-    const entries = Object.entries(pendingThresholds);
+    const entries = Object.entries(pendingThresholds) as [string, { minStock: number; maxStock: number }][];
     if (entries.length === 0) {
       alert("No threshold changes have been modified.");
       return;
@@ -990,7 +990,7 @@ export function InventoryAndExpiryView({
                               ? "bg-blue-50 text-blue-700"
                               : m.type === "purchase"
                               ? "bg-emerald-50 text-emerald-700"
-                              : m.type === "expiry_writeoff"
+                              : m.type === "expiry"
                               ? "bg-red-100 text-red-800"
                               : "bg-neutral-100 text-neutral-700"
                           }`}

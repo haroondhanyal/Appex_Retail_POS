@@ -148,6 +148,25 @@ npm run build
 npm run start
 ```
 
+## Verification
+
+The project is verified with the following checks:
+
+```bash
+npm run lint
+npm run build
+```
+
+The local development server can then be started with `npm run dev` and opened at `http://localhost:3000`. A basic local smoke test confirms that the health endpoint, product data, automated insight endpoint, and frontend HTML shell are served correctly.
+
+The Gemini query endpoint is intentionally not included in an unattended smoke test: when a Gemini API key is configured, it can send the documented store-summary context to Google Gemini. Test it manually only with data you are authorized to share.
+
+### Recent maintenance fixes
+
+- Added the optional manufacturing-date field to purchase-item data, allowing received purchase batches to compile and retain their manufacture date.
+- Replaced global React event-type references with explicit type imports in the image upload component.
+- Corrected threshold-update type inference and the inventory expiry movement label, so strict TypeScript checking completes successfully.
+
 ## API overview
 
 The backend exposes JSON REST endpoints under `/api`.

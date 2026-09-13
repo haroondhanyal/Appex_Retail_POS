@@ -1470,6 +1470,7 @@ app.put("/api/purchases/:id/receive", (req: Request, res: Response) => {
   po.status = "received";
 
   for (const it of po.items) {
+    const manufacturingDate = (it as { mfgDate?: string }).mfgDate;
     const product = db.products.find(p => p.id === it.productId);
     if (product) {
       const prev = product.currentStock;
@@ -1482,7 +1483,7 @@ app.put("/api/purchases/:id/receive", (req: Request, res: Response) => {
         id: "b-" + Date.now() + "-" + Math.random().toString(36).substring(2, 5),
         productId: product.id,
         batchNumber,
-        mfgDate: it.mfgDate || new Date().toISOString().split("T")[0],
+        mfgDate: manufacturingDate || new Date().toISOString().split("T")[0],
         expiryDate: it.expiryDate || "",
         quantity: Number(it.quantity),
         costPrice: Number(it.costPrice),
