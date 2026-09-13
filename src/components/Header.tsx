@@ -25,6 +25,9 @@ interface HeaderProps {
   settings: SystemSettings;
   onUpdateTheme: (theme: ThemeType) => void;
   isOnline: boolean;
+  manualOffline: boolean;
+  lastSyncAt: string | null;
+  onModeChange: (offline: boolean) => void;
   offlineCount: number;
   onSyncOffline: () => void;
   isSyncing: boolean;
@@ -46,6 +49,9 @@ export function Header({
   settings,
   onUpdateTheme,
   isOnline,
+  manualOffline,
+  lastSyncAt,
+  onModeChange,
   offlineCount,
   onSyncOffline,
   isSyncing,
@@ -138,16 +144,31 @@ export function Header({
 
         {/* Online / Offline status badge */}
         <div className="hidden sm:flex items-center ml-2">
+          <button
+            onClick={() => onModeChange(!manualOffline)}
+            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold border transition ${
+              isOnline ? "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100" : "bg-red-50 text-red-700 border-red-200 hover:bg-red-100"
+            }`}
+            title={manualOffline ? "Switch to Online mode" : "Switch to Offline mode"}
+          >
           {isOnline ? (
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
+            <>
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
               <Wifi className="w-3.5 h-3.5" />
               Online
-            </span>
+            </>
           ) : (
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200">
+            <>
+              <span className="w-2 h-2 rounded-full bg-red-500"></span>
               <WifiOff className="w-3.5 h-3.5" />
-              Offline — Will Sync
+              {manualOffline ? "Offline (Manual)" : "Offline"}
+            </>
+          )}
+          </button>
+
+          {isOnline && lastSyncAt && (
+            <span className="ml-2 text-[10px] font-medium text-neutral-500" title={new Date(lastSyncAt).toLocaleString()}>
+              Synced {new Date(lastSyncAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
             </span>
           )}
 
@@ -157,7 +178,7 @@ export function Header({
               onClick={onSyncOffline}
               disabled={isSyncing || !isOnline}
               className="ml-2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-500 text-white shadow-xs hover:bg-amber-600 disabled:opacity-50 transition"
-              title="Click to synchronize offline transactions"
+              title={manualOffline ? "Switch to Online mode to synchronize" : "Click to synchronize offline transactions"}
             >
               <RefreshCw className={`w-3 h-3 ${isSyncing ? "animate-spin" : ""}`} />
               Sync {offlineCount} Offline

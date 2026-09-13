@@ -17,8 +17,22 @@ import {
 
 const OFFLINE_SALES_KEY = "apex_pos_offline_sales";
 const LOCAL_CACHE_PREFIX = "apex_pos_cache_";
+const OFFLINE_MODE_KEY = "apex_pos_force_offline";
+const LAST_SYNC_KEY = "apex_pos_last_sync";
 
 export const api = {
+  isManualOffline(): boolean {
+    return localStorage.getItem(OFFLINE_MODE_KEY) === "true";
+  },
+
+  setManualOffline(enabled: boolean): void {
+    localStorage.setItem(OFFLINE_MODE_KEY, String(enabled));
+  },
+
+  getLastSyncAt(): string | null {
+    return localStorage.getItem(LAST_SYNC_KEY);
+  },
+
   // Products
   async getProducts(): Promise<Product[]> {
     try {
@@ -85,6 +99,7 @@ export const api = {
 
   async createSale(saleData: any): Promise<Sale> {
     try {
+      if (this.isManualOffline()) throw new Error("Manual offline mode enabled");
       const res = await fetch("/api/sales", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -97,7 +112,7 @@ export const api = {
       return res.json();
     } catch (err: any) {
       // If offline or network error, save to offline sales queue!
-      if (!navigator.onLine || err.message.includes("Failed to fetch") || err.message.includes("NetworkError")) {
+      if (this.isManualOffline() || !navigator.onLine || err.message.includes("Failed to fetch") || err.message.includes("NetworkError")) {
         const offlineSale: Sale = {
           ...saleData,
           id: "off-sale-" + Date.now(),
@@ -130,6 +145,7 @@ export const api = {
 
   // Offline Sync
   async syncOfflineSales(): Promise<{ syncedCount: number; message: string }> {
+    if (this.isManualOffline()) throw new Error("Switch to Online mode before synchronizing transactions");
     const offlineQueue = JSON.parse(localStorage.getItem(OFFLINE_SALES_KEY) || "[]");
     if (!offlineQueue.length) {
       return { syncedCount: 0, message: "No offline sales to sync" };
@@ -142,6 +158,7 @@ export const api = {
     if (!res.ok) throw new Error("Synchronization failed");
     const data = await res.json();
     localStorage.removeItem(OFFLINE_SALES_KEY);
+    localStorage.setItem(LAST_SYNC_KEY, new Date().toISOString());
     return data;
   },
 
@@ -256,9 +273,17 @@ export const api = {
 
   // Customers & Suppliers
   async getCustomers(): Promise<Customer[]> {
-    const res = await fetch("/api/customers");
-    if (!res.ok) throw new Error("Failed to fetch customers");
-    return res.json();
+    try {
+      const res = await fetch("/api/customers");
+      if (!res.ok) throw new Error("Failed to fetch customers");
+      const data = await res.json();
+      localStorage.setItem(LOCAL_CACHE_PREFIX + "customers", JSON.stringify(data));
+      return data;
+    } catch (err) {
+      const cached = localStorage.getItem(LOCAL_CACHE_PREFIX + "customers");
+      if (cached) return JSON.parse(cached);
+      throw err;
+    }
   },
 
   async createCustomer(data: Partial<Customer>): Promise<Customer> {

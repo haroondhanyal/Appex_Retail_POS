@@ -47,6 +47,17 @@ inventory deduction -> batch deduction -> stock movement -> low-stock notificati
 Offline browser? -> queue sale in localStorage -> reconnect -> /api/sync -> persist sale and stock movement
 ```
 
+### Global online/offline mode
+
+The header has a global status switch available from every portal:
+
+- **Online** fetches current server data and automatically synchronizes queued POS sales when a connection is restored.
+- **Offline (Manual)** lets a user deliberately continue in local POS mode even while the device still has a network connection. Toggle the red badge back to Online to synchronize.
+- Offline sales are retained in browser `localStorage`, receive an offline invoice ID, can still be receipted/printed, and reduce the displayed local stock. Products and customers are read from the most recently cached data.
+- The header displays pending transaction count and the last successful synchronization time. The server sync endpoint ignores duplicate sale IDs/invoice numbers before applying inventory movements.
+
+Only supported POS sales are queued offline in this demo; administration, refunds, purchasing, profile changes, and other server-managed writes require Online mode.
+
 ### Checkout workflow
 
 1. The cashier finds a product by name, SKU, barcode, category, or the camera scanner.

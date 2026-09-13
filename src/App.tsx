@@ -55,7 +55,10 @@ export default function App() {
   const [isScannerOpen, setIsScannerOpen] = useState(false);
 
   // Network & Sync State
-  const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const [browserOnline, setBrowserOnline] = useState(navigator.onLine);
+  const [manualOffline, setManualOffline] = useState(api.isManualOffline());
+  const [lastSyncAt, setLastSyncAt] = useState<string | null>(api.getLastSyncAt());
+  const isOnline = browserOnline && !manualOffline;
   const [offlineCount, setOfflineCount] = useState(api.getOfflineSalesCount());
   const [isSyncing, setIsSyncing] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -168,12 +171,12 @@ export default function App() {
   // Online / Offline event listeners
   useEffect(() => {
     const handleOnline = () => {
-      setIsOnline(true);
+      setBrowserOnline(true);
       // Auto sync pending offline sales
-      handleSyncOffline();
+      if (!api.isManualOffline()) handleSyncOffline();
     };
     const handleOffline = () => {
-      setIsOnline(false);
+      setBrowserOnline(false);
     };
 
     window.addEventListener("online", handleOnline);
@@ -217,6 +220,7 @@ export default function App() {
         alert(`Successfully synchronized ${result.syncedCount} offline transaction(s).`);
       }
       setOfflineCount(api.getOfflineSalesCount());
+      setLastSyncAt(api.getLastSyncAt());
       loadData();
     } catch (err: any) {
       alert("Failed to sync offline sales: " + err.message);
@@ -229,10 +233,22 @@ export default function App() {
     const newSale = await api.createSale(saleData);
     setSales(prev => [newSale, ...prev]);
     setOfflineCount(api.getOfflineSalesCount());
+    if (!newSale.offlineSynced && (manualOffline || !browserOnline)) {
+      setProducts(prev => prev.map(product => {
+        const sold = newSale.items.find(item => item.productId === product.id);
+        return sold ? { ...product, currentStock: Math.max(0, product.currentStock - sold.quantity) } : product;
+      }));
+    }
     // Refresh stats & products in background
     api.getProducts().then(setProducts).catch(() => {});
     api.getDashboardStats().then(setStats).catch(() => {});
     return newSale;
+  };
+
+  const handleModeChange = (offline: boolean) => {
+    api.setManualOffline(offline);
+    setManualOffline(offline);
+    if (!offline && browserOnline) handleSyncOffline();
   };
 
   const handleRefundSale = async (saleId: string, payload: any) => {
@@ -427,6 +443,9 @@ export default function App() {
         settings={settings}
         onUpdateTheme={handleUpdateTheme}
         isOnline={isOnline}
+        manualOffline={manualOffline}
+        lastSyncAt={lastSyncAt}
+        onModeChange={handleModeChange}
         offlineCount={offlineCount}
         onSyncOffline={handleSyncOffline}
         isSyncing={isSyncing}
