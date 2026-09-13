@@ -15,10 +15,12 @@ import {
   Check,
   Trash2,
   Eye,
-  Clock
+  Clock,
+  Pencil
 } from "lucide-react";
 import { SystemSettings, User, ThemeType, Role, ROLE_LABELS, StaffActivity } from "../types";
 import { api } from "../services/api";
+import { ImageCaptureUpload } from "./ImageCaptureUpload";
 
 const STAFF_ROLE_OPTIONS: { role: Role; description: string; access: string }[] = [
   { role: "cashier", description: "Runs checkout, scans products, and manages receipts.", access: "POS, receipts, AI Copilot" },
@@ -190,13 +192,16 @@ export function SettingsView({
   const [showUserModal, setShowUserModal] = useState(false);
   const [staffActivity, setStaffActivity] = useState<StaffActivity | null>(null);
   const [isLoadingActivity, setIsLoadingActivity] = useState(false);
-  const [newUserForm, setNewUserForm] = useState<Pick<User, "name" | "username" | "role" | "email" | "phone">>({
+  const [editingUserId, setEditingUserId] = useState<string | null>(null);
+  const emptyUserForm: Pick<User, "name" | "username" | "role" | "email" | "phone" | "avatar"> = {
     name: "",
     username: "",
     role: "cashier",
     email: "",
-    phone: ""
-  });
+    phone: "",
+    avatar: ""
+  };
+  const [newUserForm, setNewUserForm] = useState(emptyUserForm);
 
   const handleSaveSettings = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -216,10 +221,12 @@ export function SettingsView({
     e.preventDefault();
     if (!newUserForm.name || !newUserForm.username) return;
     try {
-      await onCreateUser(newUserForm);
+      if (editingUserId) await onUpdateUser(editingUserId, newUserForm);
+      else await onCreateUser(newUserForm);
       setShowUserModal(false);
-      setNewUserForm({ name: "", username: "", role: "cashier", email: "", phone: "" });
-      alert("New user account created.");
+      setNewUserForm(emptyUserForm);
+      setEditingUserId(null);
+      alert(editingUserId ? "Staff profile updated." : "New user account created.");
     } catch (err: any) {
       alert(err.message || "Failed to create user");
     }
@@ -603,7 +610,7 @@ export function SettingsView({
             </h3>
           </div>
           <button
-            onClick={() => setShowUserModal(true)}
+            onClick={() => { setEditingUserId(null); setNewUserForm(emptyUserForm); setShowUserModal(true); }}
             className="flex items-center gap-1 text-xs font-bold text-blue-600 hover:text-blue-800"
           >
             <Plus className="w-3.5 h-3.5" />
@@ -619,7 +626,8 @@ export function SettingsView({
                 key={option.role}
                 type="button"
                 onClick={() => {
-                  setNewUserForm(current => ({ ...current, role: option.role }));
+                  setEditingUserId(null);
+                  setNewUserForm({ ...emptyUserForm, role: option.role });
                   setShowUserModal(true);
                 }}
                 className="text-left p-3 rounded-xl border border-neutral-200 bg-neutral-50 hover:border-blue-300 hover:bg-blue-50 transition"
@@ -674,6 +682,17 @@ export function SettingsView({
                       title="View login, activity, and sales"
                     >
                       <Eye className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      onClick={() => {
+                        setEditingUserId(u.id);
+                        setNewUserForm({ name: u.name, username: u.username, role: u.role, email: u.email, phone: u.phone, avatar: u.avatar || "" });
+                        setShowUserModal(true);
+                      }}
+                      className="mr-1 p-1.5 rounded-lg text-blue-600 hover:bg-blue-50"
+                      title="Edit staff profile and picture"
+                    >
+                      <Pencil className="w-3.5 h-3.5" />
                     </button>
                     <button
                       onClick={() => handleToggleUserActive(u)}
@@ -749,12 +768,22 @@ export function SettingsView({
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-xs p-4">
           <div className="bg-white rounded-2xl w-full max-w-md overflow-hidden shadow-2xl border border-neutral-200">
             <div className="px-6 py-4 bg-neutral-900 text-white flex items-center justify-between">
-              <h3 className="font-bold text-base">Add Staff User</h3>
+              <h3 className="font-bold text-base">{editingUserId ? "Edit Staff Profile" : "Add Staff User"}</h3>
               <button onClick={() => setShowUserModal(false)} className="text-neutral-400 hover:text-white">
                 ✕
               </button>
             </div>
             <form onSubmit={handleCreateUserSubmit} className="p-6 space-y-3">
+              <ImageCaptureUpload
+                value={newUserForm.avatar || ""}
+                onChange={avatar => setNewUserForm({ ...newUserForm, avatar })}
+                label="Staff Profile Picture"
+              />
+              {newUserForm.avatar && (
+                <button type="button" onClick={() => setNewUserForm({ ...newUserForm, avatar: "" })} className="text-xs font-bold text-red-600 hover:underline">
+                  Remove profile picture
+                </button>
+              )}
               <div>
                 <label className="text-xs font-bold text-neutral-700 block mb-1">Full Name *</label>
                 <input
@@ -820,7 +849,7 @@ export function SettingsView({
                   type="submit"
                   className="px-6 py-2 bg-neutral-900 text-white rounded-xl text-xs font-bold hover:bg-neutral-800"
                 >
-                  Create User
+                  {editingUserId ? "Save Staff Profile" : "Create User"}
                 </button>
               </div>
             </form>

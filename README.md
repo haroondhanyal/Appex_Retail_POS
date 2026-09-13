@@ -101,6 +101,8 @@ Each account opens a role-specific portal. Navigation is filtered by the selecte
 
 Restricted portal views are guarded in the app: a cashier, salesperson, or sales agent cannot navigate to admin, warehouse, reporting, product, or staff-management screens; their sales ledger also filters to invoices created under their own staff ID. Refund controls are available only to admin and manager portals.
 
+Admins can edit any staff profile from the staff table, including role, contact details, and profile picture. Images can be captured with a camera or uploaded from a device; uploaded images are compressed in the browser and can be removed to return the account to its default avatar. The active portal session can be started/ended from either the header account menu or the sidebar **Login/Logout** control.
+
 ### Customer and supplier profile images
 
 Managers and admins can add or edit an optional customer or supplier picture from **Directory**. The image control supports camera capture and image-file upload, compresses the image in the browser, and shows the saved image on the directory card. Customer records can also be classified as walk-in, registered, online, corporate, wholesale, or delivery; the selected type exposes the relevant delivery, tax, credit, or bulk-pricing fields.

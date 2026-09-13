@@ -11,10 +11,12 @@ import {
   ShieldAlert,
   Settings,
   Scan,
+  LogIn,
+  LogOut,
   ChevronLeft,
   ChevronRight
 } from "lucide-react";
-import { UserRole } from "../types";
+import { StaffSession, User, UserRole } from "../types";
 
 interface SidebarProps {
   activeView: string;
@@ -23,6 +25,10 @@ interface SidebarProps {
   isCollapsed: boolean;
   onToggleCollapse: () => void;
   onOpenScanner: () => void;
+  currentUser: User;
+  activeSession: StaffSession | null;
+  onLogin: () => Promise<void>;
+  onLogout: () => Promise<void>;
 }
 
 export function Sidebar({
@@ -31,7 +37,11 @@ export function Sidebar({
   userRole,
   isCollapsed,
   onToggleCollapse,
-  onOpenScanner
+  onOpenScanner,
+  currentUser,
+  activeSession,
+  onLogin,
+  onLogout
 }: SidebarProps) {
   const navItems = [
     { id: "pos", label: "POS Checkout", icon: ShoppingBag, roles: ["admin", "manager", "cashier", "salesperson", "sales_agent"] },
@@ -119,6 +129,17 @@ export function Sidebar({
         >
           {isCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
         </button>
+      </div>
+      <div className="p-2 border-t border-neutral-100">
+        {activeSession ? (
+          <button onClick={() => onLogout()} className="w-full flex items-center justify-center gap-2 rounded-lg px-2 py-2 text-xs font-bold text-red-700 hover:bg-red-50" title="End current portal session">
+            <LogOut className="w-4 h-4" /> {!isCollapsed && <span>Logout {currentUser.name.split(" ")[0]}</span>}
+          </button>
+        ) : (
+          <button onClick={() => onLogin()} className="w-full flex items-center justify-center gap-2 rounded-lg px-2 py-2 text-xs font-bold text-emerald-700 hover:bg-emerald-50" title="Start current portal session">
+            <LogIn className="w-4 h-4" /> {!isCollapsed && <span>Login</span>}
+          </button>
+        )}
       </div>
     </aside>
   );

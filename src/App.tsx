@@ -469,6 +469,10 @@ export default function App() {
               isCollapsed={isSidebarCollapsed}
               onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
               onOpenScanner={() => setIsScannerOpen(true)}
+              currentUser={currentUser}
+              activeSession={activeSession}
+              onLogin={() => handleLoginUser(currentUser)}
+              onLogout={handleLogoutUser}
             />
           </div>
         )}

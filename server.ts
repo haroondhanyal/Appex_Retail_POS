@@ -1048,7 +1048,7 @@ app.get("/api/users", (req: Request, res: Response) => {
 });
 
 app.post("/api/users", (req: Request, res: Response) => {
-  const { name, username, role, email, phone, active } = req.body;
+  const { name, username, role, email, phone, active, avatar } = req.body;
   if (!name || !username || !role) {
     return res.status(400).json({ error: "Name, username and role are required" });
   }
@@ -1066,7 +1066,7 @@ app.post("/api/users", (req: Request, res: Response) => {
     email: email || "",
     phone: phone || "",
     active: active !== undefined ? active : true,
-    avatar: `https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&q=80`,
+    avatar: avatar || `https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&q=80`,
     createdAt: new Date().toISOString(),
     lastLogin: new Date().toISOString()
   };
@@ -1079,7 +1079,7 @@ app.post("/api/users", (req: Request, res: Response) => {
 app.put("/api/users/:id", (req: Request, res: Response) => {
   const user = db.users.find(u => u.id === req.params.id);
   if (!user) return res.status(404).json({ error: "User not found" });
-  const { name, role, email, phone, active } = req.body;
+  const { name, role, email, phone, active, avatar } = req.body;
   if (name) user.name = name;
   if (role) {
     if (!ALLOWED_ROLES.has(role)) return res.status(400).json({ error: "Invalid staff role" });
@@ -1087,6 +1087,7 @@ app.put("/api/users/:id", (req: Request, res: Response) => {
   }
   if (email !== undefined) user.email = email;
   if (phone !== undefined) user.phone = phone;
+  if (avatar !== undefined) user.avatar = avatar;
   if (active !== undefined) user.active = active;
   logAudit("admin", "Admin", "admin", "USER_UPDATED", "User", user.id, `Updated user ${user.name}`);
   saveDb();
