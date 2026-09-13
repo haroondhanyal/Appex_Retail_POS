@@ -1,17 +1,25 @@
 import express, { Request, Response } from "express";
 import path from "path";
 import fs from "fs";
+import dotenv from "dotenv";
 import { GoogleGenAI } from "@google/genai";
 import { createServer as createViteServer } from "vite";
 
+dotenv.config({ path: ".env.local" });
+dotenv.config();
+
 const app = express();
-const PORT = 3000;
+const PORT = Number(process.env.PORT) || 3000;
+const configuredAiMode = process.env.AI_MODE?.toLowerCase();
+const AI_MODE: "local" | "auto" | "gemini" =
+  configuredAiMode === "gemini" || configuredAiMode === "auto" ? configuredAiMode : "local";
 
 app.use(express.json({ limit: "25mb" }));
 
 // Lazy Google GenAI Client
 let aiClient: GoogleGenAI | null = null;
 function getAIClient(): GoogleGenAI | null {
+  if (AI_MODE === "local") return null;
   if (!aiClient && process.env.GEMINI_API_KEY) {
     aiClient = new GoogleGenAI({
       apiKey: process.env.GEMINI_API_KEY,
@@ -1901,7 +1909,7 @@ app.post("/api/sync", (req: Request, res: Response) => {
   });
 });
 
-// AI Assistant & Business Insights Endpoint (Powered by Gemini)
+// AI Assistant & Business Insights Endpoint. Local mode keeps all analysis on this server.
 app.post("/api/ai/query", async (req: Request, res: Response) => {
   const { query, userRole, userName } = req.body;
   if (!query) return res.status(400).json({ error: "Query is required" });
@@ -1914,7 +1922,7 @@ app.post("/api/ai/query", async (req: Request, res: Response) => {
       return res.json({
         response: answer.text,
         structuredData: answer.structuredData,
-        modelUsed: "local-heuristic"
+        modelUsed: "local-rules-v1"
       });
     }
 
@@ -1977,7 +1985,7 @@ Guidelines:
     res.json({
       response: answer.text,
       structuredData: answer.structuredData,
-      modelUsed: "local-heuristic",
+      modelUsed: "local-rules-v1",
       note: "Answered using local database intelligence"
     });
   }
@@ -1986,13 +1994,22 @@ Guidelines:
 // Fallback AI Query Engine for offline or non-API scenarios
 function fallbackAIQuery(query: string) {
   const q = query.toLowerCase();
-  if (q.includes("today's sales") || q.includes("today sales") || q.includes("sales today")) {
-    const today = new Date().toISOString().split("T")[0];
-    const sales = db.sales.filter(s => s.timestamp.startsWith(today) && s.status !== "refunded");
-    const total = sales.reduce((sum, s) => sum + s.grandTotal, 0);
+  const today = new Date().toISOString().split("T")[0];
+  const completedSales = db.sales.filter(s => s.status === "completed");
+  const todaySales = completedSales.filter(s => s.timestamp.startsWith(today));
+  const salesRevenue = (sales: typeof completedSales) => sales.reduce((sum, sale) => sum + Number(sale.grandTotal || 0), 0);
+  const salesProfit = (sales: typeof completedSales) => sales.reduce((sum, sale) => {
+    const grossProfit = sale.items.reduce((itemSum: number, item: any) => itemSum + (Number(item.lineTotal) - Number(item.costPrice || 0) * Number(item.quantity || 0)), 0);
+    return sum + grossProfit;
+  }, 0);
+
+  if (q.includes("profit") || q.includes("today's sales") || q.includes("today sales") || q.includes("sales today")) {
+    const total = salesRevenue(todaySales);
+    const profit = salesProfit(todaySales);
+    const margin = total > 0 ? (profit / total) * 100 : 0;
     return {
-      text: `Today's total sales volume is **$${total.toFixed(2)}** across **${sales.length}** transactions.`,
-      structuredData: sales
+      text: `Today's completed sales are **$${total.toFixed(2)}** across **${todaySales.length}** transactions. Estimated gross profit is **$${profit.toFixed(2)}** (${margin.toFixed(1)}% margin). This uses recorded item cost and line totals, before operating expenses and tax settlement.`,
+      structuredData: todaySales
     };
   }
 
@@ -2024,6 +2041,33 @@ function fallbackAIQuery(query: string) {
     };
   }
 
+  if (q.includes("cashier") || q.includes("staff") || q.includes("performing")) {
+    const performance: Record<string, { name: string; sales: number; revenue: number }> = {};
+    todaySales.forEach(sale => {
+      const key = sale.cashierId || sale.cashierName;
+      if (!performance[key]) performance[key] = { name: sale.cashierName || "Unknown", sales: 0, revenue: 0 };
+      performance[key].sales += 1;
+      performance[key].revenue += Number(sale.grandTotal || 0);
+    });
+    const ranked = Object.values(performance).sort((a, b) => b.revenue - a.revenue);
+    return {
+      text: ranked.length
+        ? `Today's cashier performance:\n${ranked.map((cashier, index) => `${index + 1}. **${cashier.name}** — ${cashier.sales} sale(s), $${cashier.revenue.toFixed(2)} revenue`).join("\n")}`
+        : "No completed sales have been recorded today, so there is no cashier performance to rank yet.",
+      structuredData: ranked
+    };
+  }
+
+  if (q.includes("price") || q.includes("markdown") || q.includes("discount") || q.includes("strategy")) {
+    const atRisk = db.products.filter(p => calculateExpiryStatus(p.expiryDate) === "expiring_soon" && p.currentStock > 0);
+    return {
+      text: atRisk.length
+        ? `Recommended expiry markdowns:\n${atRisk.map(p => `• **${p.name}** — ${p.currentStock} ${p.unit}(s), expires ${p.expiryDate}: start with a 15% markdown; review daily and increase to 25% only if stock remains close to expiry.`).join("\n")}\n\nProtect margin by applying markdowns only to at-risk batches and pairing them with faster-moving items.`
+        : "There are no in-stock products currently marked as expiring soon. Keep normal pricing and review the expiry dashboard daily.",
+      structuredData: atRisk
+    };
+  }
+
   if (q.includes("top") || q.includes("best selling")) {
     const map: Record<string, { name: string; qty: number; revenue: number }> = {};
     db.sales.forEach(s => {
@@ -2043,7 +2087,7 @@ function fallbackAIQuery(query: string) {
 
   // General summary
   return {
-    text: `Store Status Summary:\n• Total active products: **${db.products.length}**\n• Total recorded sales: **${db.sales.length}** ($${db.sales.reduce((a, b) => a + b.grandTotal, 0).toFixed(2)})\n• Registered customers: **${db.customers.length}**\n• Active suppliers: **${db.suppliers.length}**\n\nAsk me about specific inventory thresholds, expiration dates, cashier statistics, or sales trends!`,
+    text: `Local Store Summary:\n• Active products: **${db.products.length}**\n• Completed sales: **${completedSales.length}** ($${salesRevenue(completedSales).toFixed(2)})\n• Registered customers: **${db.customers.length}**\n• Active suppliers: **${db.suppliers.length}**\n\nAsk about sales and profit, low stock, expiry, cashier performance, product rankings, or markdowns.`,
     structuredData: null
   };
 }

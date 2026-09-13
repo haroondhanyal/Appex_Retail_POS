@@ -118,11 +118,11 @@ export function AIAssistantView({ currentUser }: AIAssistantViewProps) {
             </h1>
             <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-100 text-amber-900 flex items-center gap-1">
               <Sparkles className="w-3 h-3 text-amber-600" />
-              Gemini Powered
+              Local & Private
             </span>
           </div>
           <p className="text-xs text-neutral-500 mt-0.5">
-            Real-time conversational analytics, inventory demand prediction, and smart markdown recommendations.
+            Private on-server analytics for sales, profit, inventory risk, staff performance, and markdown recommendations.
           </p>
         </div>
 

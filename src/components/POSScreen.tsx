@@ -34,7 +34,7 @@ import {
   User as AuthUser
 } from "../types";
 import { playBeepSound, playSuccessSound, playErrorSound } from "../services/sound";
-import { formatThermalReceiptText, downloadReceiptAsFile, shareReceipt } from "../services/receiptService";
+import { formatThermalReceiptText, downloadReceiptAsFile, printReceipt, shareReceipt } from "../services/receiptService";
 
 interface POSScreenProps {
   products: Product[];
@@ -1016,11 +1016,11 @@ export function POSScreen({
             <div className="p-4 bg-white border-t border-neutral-200 flex flex-col gap-2">
               <div className="flex gap-2">
                 <button
-                  onClick={() => window.print()}
+                  onClick={() => printReceipt(completedSale, settings, receiptFormat)}
                   className="flex-1 py-2.5 bg-neutral-900 hover:bg-neutral-800 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 shadow-sm"
                 >
                   <Printer className="w-4 h-4" />
-                  Print Receipt
+                  Print / Save PDF
                 </button>
                 <button
                   onClick={() => downloadReceiptAsFile(completedSale, settings)}

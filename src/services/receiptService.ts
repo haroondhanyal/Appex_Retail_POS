@@ -1,5 +1,7 @@
 import { Sale, SystemSettings, Refund } from "../types";
 
+export type ReceiptPrintFormat = "thermal" | "a4";
+
 export function formatThermalReceiptText(sale: Sale, settings: SystemSettings): string {
   const line = "------------------------------------------";
   const doubleLine = "==========================================";
@@ -81,6 +83,36 @@ export function downloadReceiptAsFile(sale: Sale, settings: SystemSettings) {
   a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
+}
+
+/** Opens a receipt-only document. In Chrome, choose “Save to PDF” in the print dialog. */
+export function printReceipt(sale: Sale, settings: SystemSettings, format: ReceiptPrintFormat = "thermal") {
+  const printWindow = window.open("", "_blank", "width=760,height=900");
+  if (!printWindow) {
+    alert("The print window was blocked. Please allow pop-ups for this site and try again.");
+    return;
+  }
+  printWindow.opener = null;
+
+  const isA4 = format === "a4";
+  const documentTitle = `Receipt-${sale.invoiceNumber}`;
+  printWindow.document.title = documentTitle;
+  printWindow.document.head.innerHTML = `
+    <meta charset="utf-8" />
+    <title>${documentTitle}</title>
+    <style>
+      @page { size: ${isA4 ? "A4" : "80mm auto"}; margin: ${isA4 ? "16mm" : "4mm"}; }
+      * { box-sizing: border-box; }
+      body { margin: 0; color: #111; background: #fff; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+      pre { margin: 0; white-space: pre-wrap; font-size: ${isA4 ? "12px" : "10px"}; line-height: 1.35; }
+      .receipt { width: ${isA4 ? "100%" : "72mm"}; margin: 0 auto; }
+    </style>`;
+  const receipt = printWindow.document.createElement("pre");
+  receipt.className = "receipt";
+  receipt.textContent = formatThermalReceiptText(sale, settings);
+  printWindow.document.body.appendChild(receipt);
+  printWindow.focus();
+  printWindow.print();
 }
 
 export async function shareReceipt(sale: Sale, settings: SystemSettings): Promise<boolean> {

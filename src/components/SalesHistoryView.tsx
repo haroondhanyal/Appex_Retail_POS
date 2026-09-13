@@ -13,7 +13,7 @@ import {
   X
 } from "lucide-react";
 import { Sale, SystemSettings, User } from "../types";
-import { formatThermalReceiptText, downloadReceiptAsFile, shareReceipt } from "../services/receiptService";
+import { formatThermalReceiptText, downloadReceiptAsFile, printReceipt, shareReceipt } from "../services/receiptService";
 
 interface SalesHistoryViewProps {
   sales: Sale[];
@@ -269,11 +269,11 @@ export function SalesHistoryView({
 
             <div className="p-4 bg-white border-t border-neutral-200 flex gap-2">
               <button
-                onClick={() => window.print()}
+                onClick={() => printReceipt(selectedSale, settings)}
                 className="flex-1 py-2.5 bg-neutral-900 hover:bg-neutral-800 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5"
               >
                 <Printer className="w-4 h-4" />
-                Print
+                Print / Save PDF
               </button>
               <button
                 onClick={() => downloadReceiptAsFile(selectedSale, settings)}

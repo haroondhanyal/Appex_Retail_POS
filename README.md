@@ -6,14 +6,14 @@ The project uses a React/Vite frontend with an Express API. Demo and local data 
 
 ## Highlights
 
-- Fast POS checkout with product search, category filters, barcode lookup, item/cart discounts, tax calculation, held carts, and receipt export/sharing.
+- Fast POS checkout with product search, category filters, barcode lookup, item/cart discounts, tax calculation, held carts, receipt export/sharing, and receipt-only print/PDF output.
 - Cash, card, bank transfer, digital-wallet, and split-payment workflows.
 - Product catalogue with SKU, barcode, pricing, supplier, batch, stock threshold, and expiry details.
 - Inventory protection: low-stock alerts, negative-stock prevention, expiry blocking, batch-aware stock deduction, adjustments, disposal, and stock-movement history.
 - Purchase orders and receiving flow that updates inventory.
 - Customers, suppliers, role-based navigation, store settings, notifications, dashboard, sales reporting, P&L-oriented analytics, and audit logs.
 - Offline sale queue in browser storage with automatic/manual synchronization when connectivity returns.
-- Gemini-powered AI Retail Copilot for conversational business intelligence, plus a local fallback when no Gemini key is configured.
+- Private, local-first AI Retail Copilot for conversational business intelligence; Gemini is an opt-in provider only.
 - Responsive desktop and mobile POS layouts, native-camera barcode scanner, keyboard shortcuts (`F2` POS and `F4` scanner), themes, and optional sound effects.
 
 ## Technology
@@ -51,7 +51,7 @@ Offline browser? -> queue sale in localStorage -> reconnect -> /api/sync -> pers
 2. The product is added to the cart. Item-level and cart-level discounts, tax, customer details, and sale notes can be applied.
 3. Before a sale is saved, the server validates that each product exists, enforces the expired-product policy, and prevents insufficient stock unless the relevant settings allow otherwise.
 4. On a successful payment, the API creates an invoice, saves the sale, deducts stock (including available batches), creates stock-movement records, updates customer spend/visit data, records an audit event, and raises a low-stock/out-of-stock notification where applicable.
-5. The cashier can view, download, share, or print the completed receipt. Refunds can restock returned items and update the original sale status.
+5. The cashier can view, download, share, or select **Print / Save PDF** for the completed receipt. Printing opens a receipt-only document; in Chrome, choose **Save to PDF** in the native print dialog. Refunds can restock returned items and update the original sale status.
 
 ### Inventory and purchasing workflow
 
@@ -88,9 +88,9 @@ The **AI Retail Intelligence & Copilot** screen accepts questions in natural lan
 
 ### How AI data is handled
 
-For a Gemini request, the server prepares a compact live-store summary: counts of products, sales, customers and suppliers; low-stock and expiry lists; the five most recent sales; and a sample of up to ten products. This summary, the staff role/name, and the user question are sent to Gemini. The configured model is `gemini-3.8-flash`.
+By default, `AI_MODE="local"` runs the built-in `local-rules-v1` engine entirely in the Express server. No store data leaves the application. It calculates sales and estimated gross profit from recorded line totals and costs, ranks cashiers and top-selling products, identifies stock/expiry risks, and gives markdown guidance for expiring products.
 
-If `GEMINI_API_KEY` is absent, or the Gemini request fails, the application still responds through its local heuristic engine. It supports sales-today, low-stock, expiry, and top-product queries without an external AI call; its response is labelled `local-heuristic` in the UI.
+Gemini is optional. Set `AI_MODE="gemini"` (or `"auto"`) and provide `GEMINI_API_KEY` only if you explicitly want external Gemini responses. In that mode, the server sends a compact store summary—counts, low-stock/expiry lists, recent sales, a product sample, staff role/name, and the question—to Gemini. If it is unavailable, the local engine is used automatically.
 
 Example prompts:
 
@@ -125,11 +125,12 @@ Open the local URL shown by the development server (normally `http://localhost:3
 Create `.env.local` from `.env.example`. Never commit this file.
 
 ```env
-GEMINI_API_KEY="your_google_gemini_api_key"
+AI_MODE="local"
+GEMINI_API_KEY=""
 APP_URL="http://localhost:3000"
 ```
 
-`GEMINI_API_KEY` is optional: omit it to use the local AI fallback. `APP_URL` is reserved for the deployed app URL and self-referential/OAuth-style use cases.
+Keep `AI_MODE="local"` for private, on-server analytics. To use Gemini, set `AI_MODE="gemini"` or `AI_MODE="auto"` and add a valid `GEMINI_API_KEY`. `APP_URL` is reserved for the deployed app URL and self-referential/OAuth-style use cases.
 
 ### Scripts
 
@@ -159,13 +160,14 @@ npm run build
 
 The local development server can then be started with `npm run dev` and opened at `http://localhost:3000`. A basic local smoke test confirms that the health endpoint, product data, automated insight endpoint, and frontend HTML shell are served correctly.
 
-The Gemini query endpoint is intentionally not included in an unattended smoke test: when a Gemini API key is configured, it can send the documented store-summary context to Google Gemini. Test it manually only with data you are authorized to share.
+The local AI endpoint is safe to include in an unattended smoke test because it does not send data outside the server. When Gemini mode is configured, test external Gemini queries only with data you are authorized to share.
 
 ### Recent maintenance fixes
 
 - Added the optional manufacturing-date field to purchase-item data, allowing received purchase batches to compile and retain their manufacture date.
 - Replaced global React event-type references with explicit type imports in the image upload component.
 - Corrected threshold-update type inference and the inventory expiry movement label, so strict TypeScript checking completes successfully.
+- Added a receipt-only print route for dependable Chrome **Save to PDF** output, plus local-first AI mode with sales/profit, cashier, expiry, and markdown analysis.
 
 ## API overview
 
