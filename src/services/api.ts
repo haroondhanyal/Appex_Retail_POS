@@ -21,17 +21,26 @@ const OFFLINE_MODE_KEY = "apex_pos_force_offline";
 const LAST_SYNC_KEY = "apex_pos_last_sync";
 
 export const api = {
-  async login(identifier: string, password: string): Promise<{ user: User; token: string }> {
-    const res = await fetch("/api/auth/login", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ identifier, password }) });
+  async login(identifier: string, password: string, selectedRole: string): Promise<{ user: User; token: string }> {
+    const res = await fetch("/api/auth/login", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ identifier, password, selectedRole }) });
     if (!res.ok) throw new Error((await res.json()).error || "Login failed");
     return res.json();
   },
 
-  async signup(data: { name: string; username: string; email: string; phone?: string; role: string; password: string }): Promise<{ message: string }> {
+  async signup(data: { name: string; username: string; email: string; phone?: string; role: string; password: string; avatar?: string; address?: string }): Promise<{ message: string; requestId?: string }> {
     const res = await fetch("/api/auth/signup", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) });
     if (!res.ok) throw new Error((await res.json()).error || "Signup failed");
     return res.json();
   },
+
+  async requestPasswordReset(identifier: string): Promise<{ message: string }> {
+    const res = await fetch("/api/auth/forgot-password", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ identifier }) });
+    if (!res.ok) throw new Error((await res.json()).error || "Unable to submit request");
+    return res.json();
+  },
+
+  async getPasswordResetRequests(): Promise<User[]> { const res = await fetch("/api/password-reset-requests"); if (!res.ok) throw new Error("Unable to load requests"); return res.json(); },
+  async resetUserPassword(id: string, password: string): Promise<void> { const res = await fetch(`/api/users/${id}/reset-password`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ password }) }); if (!res.ok) throw new Error((await res.json()).error || "Unable to reset password"); },
 
   isManualOffline(): boolean {
     return localStorage.getItem(OFFLINE_MODE_KEY) === "true";

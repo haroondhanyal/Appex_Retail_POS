@@ -672,7 +672,7 @@ export function SettingsView({
                         u.active ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-700"
                       }`}
                     >
-                      {u.active ? "Active" : "Inactive"}
+                      {u.active ? "Active" : u.accountStatus === "pending" ? "Pending Approval" : "Inactive"}
                     </span>
                   </td>
                   <td className="py-2.5 text-right">
@@ -700,7 +700,7 @@ export function SettingsView({
                         u.active ? "text-red-600 hover:bg-red-50" : "text-emerald-600 hover:bg-emerald-50"
                       }`}
                     >
-                      {u.active ? "Deactivate" : "Activate"}
+                      {u.active ? "Deactivate" : u.accountStatus === "pending" ? "Approve" : "Activate"}
                     </button>
                     <button
                       onClick={() => handleDeleteUser(u)}
@@ -716,6 +716,12 @@ export function SettingsView({
             </tbody>
           </table>
         </div>
+      </div>
+
+      {/* Password Reset Requests */}
+      <div className="bg-white p-5 rounded-2xl border border-neutral-200 shadow-2xs space-y-3">
+        <div><h3 className="font-bold text-xs text-neutral-900 uppercase tracking-wider">Password Reset Requests</h3><p className="text-[11px] text-neutral-500 mt-1">Requests submitted from the login screen. Set a secure temporary password for the staff member.</p></div>
+        {users.filter(user => user.passwordResetRequestedAt).length === 0 ? <p className="text-xs text-neutral-500">No pending password reset requests.</p> : <div className="space-y-2">{users.filter(user => user.passwordResetRequestedAt).map(user => <div key={user.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs"><div><strong>{user.name}</strong><span className="ml-2 text-neutral-600">{user.email || user.username} · {ROLE_LABELS[user.role]}</span><p className="text-[10px] text-neutral-500 mt-1">Requested {new Date(user.passwordResetRequestedAt!).toLocaleString()}</p></div><button onClick={async () => { const password = window.prompt(`Set a new password for ${user.name} (minimum 8 characters):`); if (!password) return; try { await api.resetUserPassword(user.id, password); alert("Password reset successfully. Ask the user to sign in with the new password."); } catch (error: any) { alert(error.message); } }} className="rounded-lg bg-neutral-900 px-3 py-1.5 font-bold text-white">Set New Password</button></div>)}</div>}
       </div>
 
       {isLoadingActivity && (

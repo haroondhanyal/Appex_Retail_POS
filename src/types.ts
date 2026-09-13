@@ -21,6 +21,9 @@ export interface User {
   avatar?: string;
   createdAt: string;
   lastLogin?: string;
+  accountStatus?: "pending" | "approved" | "rejected" | "deactivated";
+  address?: string;
+  passwordResetRequestedAt?: string;
 }
 
 export interface StaffSession {

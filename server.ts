@@ -997,13 +997,14 @@ app.get("/api/health", (req: Request, res: Response) => {
 
 // Authentication
 app.post("/api/auth/login", (req: Request, res: Response) => {
-  const { identifier, username, password } = req.body;
+  const { identifier, username, password, selectedRole } = req.body;
   const loginValue = String(identifier || username || "").trim().toLowerCase();
-  const user: any = db.users.find(u => (u.username.toLowerCase() === loginValue || u.email.toLowerCase() === loginValue) && u.active);
-  if (!user) {
-    return res.status(401).json({ error: "Invalid email/username or account is deactivated" });
-  }
+  const user: any = db.users.find(u => u.username.toLowerCase() === loginValue || u.email.toLowerCase() === loginValue);
+  if (!user) return res.status(401).json({ error: "Invalid email or password. Please check your credentials and try again." });
+  if (!user.active) return res.status(403).json({ error: user.accountStatus === "rejected" ? "Your account request has been rejected by the Admin." : user.accountStatus === "pending" ? "Your account request is currently pending Admin approval. Request Status: Pending." : "Your account has been deactivated. Please contact your administrator." });
   if (!password || user.passwordHash !== hashPassword(password)) return res.status(401).json({ error: "Incorrect password" });
+  const approvedRoles = (user.approvedRoles || [user.role]) as string[];
+  if (!selectedRole || !approvedRoles.includes(selectedRole)) return res.status(403).json({ error: `Role mismatch. Your account is not authorized to login as ${selectedRole || "this role"}. Please select your approved role.` });
   user.lastLogin = new Date().toISOString();
   logAudit(user.id, user.name, user.role, "USER_LOGIN", "User", user.id, `User logged in from POS terminal`);
   res.json({
@@ -1013,17 +1014,35 @@ app.post("/api/auth/login", (req: Request, res: Response) => {
 });
 
 app.post("/api/auth/signup", (req: Request, res: Response) => {
-  const { name, username, email, phone, role, password } = req.body;
+  const { name, username, email, phone, role, password, avatar, address } = req.body;
   const requestedRoles = new Set(["manager", "salesperson", "sales_agent", "cashier", "warehouse_manager"]);
   if (!name || !username || !email || !password) return res.status(400).json({ error: "Name, username, email, and password are required" });
   if (String(password).length < 8) return res.status(400).json({ error: "Password must be at least 8 characters" });
   if (!requestedRoles.has(role)) return res.status(400).json({ error: "Select a valid staff role" });
   if (db.users.some(u => u.username.toLowerCase() === username.toLowerCase() || u.email.toLowerCase() === email.toLowerCase())) return res.status(400).json({ error: "Username or email already exists" });
-  const user: any = { id: "u-" + Date.now(), name, username, email, phone: phone || "", role, active: false, avatar: "", createdAt: new Date().toISOString(), lastLogin: undefined, passwordHash: hashPassword(password) };
+  const requestId = `AR-${String((db.users as any[]).filter(user => user.accountStatus === "pending").length + 1).padStart(6, "0")}`;
+  const user: any = { id: "u-" + Date.now(), name, username, email, phone: phone || "", address: address || "", role, active: false, accountStatus: "pending", avatar: avatar || "", createdAt: new Date().toISOString(), lastLogin: undefined, passwordHash: hashPassword(password), requestId };
   db.users.push(user);
   logAudit(user.id, user.name, user.role, "SIGNUP_REQUESTED", "User", user.id, `${user.name} requested ${user.role} portal access`);
   saveDb();
-  res.status(201).json({ message: "Signup request submitted. An admin must activate your account before you can sign in." });
+  res.status(201).json({ requestId, message: `Account request ${requestId} submitted successfully. Status: Pending Admin Approval.` });
+});
+
+app.post("/api/auth/forgot-password", (req: Request, res: Response) => {
+  const identifier = String(req.body.identifier || "").trim().toLowerCase();
+  const user: any = db.users.find(u => u.username.toLowerCase() === identifier || u.email.toLowerCase() === identifier);
+  if (user) { user.passwordResetRequestedAt = new Date().toISOString(); logAudit(user.id, user.name, user.role, "PASSWORD_RESET_REQUESTED", "User", user.id, "Password reset request submitted"); saveDb(); }
+  res.json({ message: "If the account exists, a password reset request has been sent to the administrator." });
+});
+
+app.get("/api/password-reset-requests", (_req: Request, res: Response) => res.json((db.users as any[]).filter(user => user.passwordResetRequestedAt)));
+
+app.post("/api/users/:id/reset-password", (req: Request, res: Response) => {
+  const user: any = db.users.find(u => u.id === req.params.id);
+  if (!user) return res.status(404).json({ error: "User not found" });
+  if (!req.body.password || String(req.body.password).length < 8) return res.status(400).json({ error: "Password must be at least 8 characters" });
+  user.passwordHash = hashPassword(req.body.password); user.passwordResetRequestedAt = undefined;
+  logAudit("admin", "Admin", "admin", "PASSWORD_RESET", "User", user.id, `Admin reset password for ${user.name}`); saveDb(); res.json({ success: true });
 });
 
 // Staff portal sessions. These power the admin activity view and are intentionally
@@ -1121,7 +1140,10 @@ app.put("/api/users/:id", (req: Request, res: Response) => {
   if (email !== undefined) user.email = email;
   if (phone !== undefined) user.phone = phone;
   if (avatar !== undefined) user.avatar = avatar;
-  if (active !== undefined) user.active = active;
+  if (active !== undefined) {
+    user.active = active;
+    (user as any).accountStatus = active ? "approved" : ((user as any).accountStatus === "pending" ? "pending" : "deactivated");
+  }
   logAudit("admin", "Admin", "admin", "USER_UPDATED", "User", user.id, `Updated user ${user.name}`);
   saveDb();
   res.json(user);

@@ -133,6 +133,33 @@ The **AI Retail Intelligence Copilot** screen combines a natural-language assist
 
 Each card is always visible. It shows live local analysis when available, otherwise a clear no-risk/review message, and takes the user directly to the relevant workspace.
 
+## Authentication and account approval
+
+The application uses a role-checked sign-in flow:
+
+1. On the **Retail POS** login screen, select **Login As** before entering an email/username and password.
+2. The server validates the credentials, account status, and the selected role against the role actually approved for that account. Selecting a role never grants extra permissions.
+3. New staff use **Create Account** to submit a request with their personal details, requested role, optional address, and optional camera/file profile picture. Requests start as **Pending Admin Approval** and receive an `AR-` request ID.
+4. An admin opens **Admin & Staff Control** and selects **Approve** beside a pending account. Only then can that staff member sign in to their role portal.
+5. Pending, rejected, and inactive accounts are denied login with a clear status message. **Remember me** saves only the email/username in the browser; it never saves a password.
+
+### Role-first signup and password reset
+
+- The login page uses a prominent **Login As** selector with icons for Admin, Manager, Cashier, Sales Person, Sales Agent, and Inventory Agent. The selected role is verified by the server against the role approved for the account.
+- **Create Account** begins with an icon-based **Select Your Role** panel. Users can request Manager, Cashier, Sales Person, Sales Agent, or Inventory Agent access; Admin cannot be requested through signup.
+- The user then completes their details, optional profile picture and address, and password. The submitted request stays pending until an admin approves it in **Admin & Staff Control**.
+- Selecting **Forgot password?** submits a reset request to the administrator. Admin & Staff Control contains **Password Reset Requests**, where an admin can set a new password for the requesting user.
+
+Development Super Admin credentials:
+
+```text
+Login As: Admin
+Email: rajaharoon320@gmail.com
+Password: 12345678
+```
+
+This local/demo authentication implementation uses a SHA-256 password hash. Production deployments should use a dedicated identity provider or a modern salted password-hashing algorithm, secure sessions, rate limiting, and authorization middleware.
+
 ### What it can analyze
 
 - Daily sales volume and recent transactions
