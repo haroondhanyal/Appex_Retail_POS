@@ -83,6 +83,13 @@ Each account opens a role-specific portal. Navigation is filtered by the selecte
 
 Dashboard KPI cards and AI insight cards are interactive: selecting a card opens its related sales, report, product, or warehouse workspace. Use **Refresh AI Insights** to reload the latest local analytics.
 
+### Staff portal login and activity tracking
+
+1. From the header's **Switch Cashier / Role Account** menu, select **Login** beside an active staff account. The portal changes to that staff member's permitted workspace and the time tracker starts.
+2. The header shows the current session's login time. Selecting another staff account automatically ends the previous portal session; **Logout** ends the active tracker manually.
+3. In **Admin & Staff Control**, select the blue detail icon beside any user to view their recent login/logout sessions, current logged-in state, POS sales, and audit activity.
+4. The admin audit log also records `PORTAL_LOGIN`, `PORTAL_LOGOUT`, checkout, refund, stock, and management events.
+
 > The included authentication endpoint and role controls are suitable for a local/demo foundation. Before production use, add password hashing, real session/token verification, authorization middleware, validation, a production database, and secure secret management.
 
 ## AI Retail Copilot

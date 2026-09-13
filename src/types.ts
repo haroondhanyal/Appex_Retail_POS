@@ -22,6 +22,23 @@ export interface User {
   lastLogin?: string;
 }
 
+export interface StaffSession {
+  id: string;
+  userId: string;
+  userName: string;
+  role: Role;
+  loginAt: string;
+  logoutAt?: string;
+  active: boolean;
+}
+
+export interface StaffActivity {
+  user: User;
+  sessions: StaffSession[];
+  sales: Sale[];
+  auditLogs: AuditLog[];
+}
+
 export type ExpiryStatus = 'fresh' | 'expiring_soon' | 'expired';
 
 export interface ProductBatch {

@@ -13,12 +13,15 @@ import {
   LogOut,
   ChevronDown
 } from "lucide-react";
-import { User, SystemSettings, ThemeType, NotificationItem, ROLE_LABELS } from "../types";
+import { User, SystemSettings, ThemeType, NotificationItem, ROLE_LABELS, StaffSession } from "../types";
 
 interface HeaderProps {
   currentUser: User;
   users: User[];
   onSwitchUser: (user: User) => void;
+  activeSession: StaffSession | null;
+  onLoginUser: (user: User) => Promise<void>;
+  onLogoutUser: () => Promise<void>;
   settings: SystemSettings;
   onUpdateTheme: (theme: ThemeType) => void;
   isOnline: boolean;
@@ -37,6 +40,9 @@ export function Header({
   currentUser,
   users,
   onSwitchUser,
+  activeSession,
+  onLoginUser,
+  onLogoutUser,
   settings,
   onUpdateTheme,
   isOnline,
@@ -54,6 +60,7 @@ export function Header({
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showThemeMenu, setShowThemeMenu] = useState(false);
   const [showNotifMenu, setShowNotifMenu] = useState(false);
+  const [isSessionUpdating, setIsSessionUpdating] = useState(false);
 
   useEffect(() => {
     const updateTime = () => {
@@ -66,6 +73,29 @@ export function Header({
   }, []);
 
   const unreadNotifs = notifications.filter(n => !n.read);
+
+  const handleLogin = async (user: User) => {
+    setIsSessionUpdating(true);
+    try {
+      await onLoginUser(user);
+      setShowUserMenu(false);
+    } catch (error: any) {
+      alert(error.message || "Unable to start staff session");
+    } finally {
+      setIsSessionUpdating(false);
+    }
+  };
+
+  const handleLogout = async () => {
+    setIsSessionUpdating(true);
+    try {
+      await onLogoutUser();
+    } catch (error: any) {
+      alert(error.message || "Unable to end staff session");
+    } finally {
+      setIsSessionUpdating(false);
+    }
+  };
 
   const themeOptions: { id: ThemeType; label: string; bg: string; group: "vibrant" | "dark" }[] = [
     { id: "grey", label: "Classic Slate", bg: "bg-neutral-600", group: "vibrant" },
@@ -331,6 +361,18 @@ export function Header({
                 <span className="inline-block mt-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-neutral-100 text-neutral-800 uppercase">
                   {ROLE_LABELS[currentUser.role]}
                 </span>
+                {activeSession ? (
+                  <div className="mt-2 flex items-center justify-between gap-2 text-[10px] text-emerald-700">
+                    <span>Logged in {new Date(activeSession.loginAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>
+                    <button onClick={handleLogout} disabled={isSessionUpdating} className="font-bold text-red-600 hover:underline disabled:opacity-50">
+                      Logout
+                    </button>
+                  </div>
+                ) : (
+                  <button onClick={() => handleLogin(currentUser)} disabled={isSessionUpdating} className="mt-2 text-[10px] font-bold text-blue-600 hover:underline disabled:opacity-50">
+                    Login & start time tracker
+                  </button>
+                )}
               </div>
 
               <div className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wider px-3 py-1 mt-1">
@@ -341,10 +383,8 @@ export function Header({
                 {users.filter(u => u.active).map(u => (
                   <button
                     key={u.id}
-                    onClick={() => {
-                      onSwitchUser(u);
-                      setShowUserMenu(false);
-                    }}
+                    onClick={() => handleLogin(u)}
+                    disabled={isSessionUpdating}
                     className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs text-left transition ${
                       currentUser.id === u.id
                         ? "bg-neutral-100 text-neutral-900 font-bold"
@@ -355,10 +395,14 @@ export function Header({
                       <UserCheck className="w-3.5 h-3.5 text-neutral-500" />
                       <div>
                         <div>{u.name}</div>
-                        <span className="text-[10px] text-neutral-400 font-normal uppercase">{u.role}</span>
+                        <span className="text-[10px] text-neutral-400 font-normal uppercase">{ROLE_LABELS[u.role]}</span>
                       </div>
                     </div>
-                    {currentUser.id === u.id && <span className="text-xs text-emerald-600">Active</span>}
+                    {currentUser.id === u.id && activeSession ? (
+                      <span className="text-[10px] text-emerald-600">Logged in</span>
+                    ) : (
+                      <span className="text-[10px] font-bold text-blue-600">Login</span>
+                    )}
                   </button>
                 ))}
               </div>

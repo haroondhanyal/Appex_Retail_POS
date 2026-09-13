@@ -13,9 +13,12 @@ import {
   Save,
   Palette,
   Check,
-  Trash2
+  Trash2,
+  Eye,
+  Clock
 } from "lucide-react";
-import { SystemSettings, User, ThemeType, Role, ROLE_LABELS } from "../types";
+import { SystemSettings, User, ThemeType, Role, ROLE_LABELS, StaffActivity } from "../types";
+import { api } from "../services/api";
 
 const STAFF_ROLE_OPTIONS: { role: Role; description: string; access: string }[] = [
   { role: "cashier", description: "Runs checkout, scans products, and manages receipts.", access: "POS, receipts, AI Copilot" },
@@ -184,6 +187,8 @@ export function SettingsView({
 
   // New User Form Modal
   const [showUserModal, setShowUserModal] = useState(false);
+  const [staffActivity, setStaffActivity] = useState<StaffActivity | null>(null);
+  const [isLoadingActivity, setIsLoadingActivity] = useState(false);
   const [newUserForm, setNewUserForm] = useState<Pick<User, "name" | "username" | "role" | "email" | "phone">>({
     name: "",
     username: "",
@@ -241,6 +246,17 @@ export function SettingsView({
       await onDeleteUser(user.id);
     } catch (err: any) {
       alert(err.message || "Failed to remove staff account");
+    }
+  };
+
+  const handleViewActivity = async (user: User) => {
+    setIsLoadingActivity(true);
+    try {
+      setStaffActivity(await api.getUserActivity(user.id));
+    } catch (err: any) {
+      alert(err.message || "Failed to load staff activity");
+    } finally {
+      setIsLoadingActivity(false);
     }
   };
 
@@ -652,6 +668,13 @@ export function SettingsView({
                   </td>
                   <td className="py-2.5 text-right">
                     <button
+                      onClick={() => handleViewActivity(u)}
+                      className="mr-1 p-1.5 rounded-lg text-blue-600 hover:bg-blue-50"
+                      title="View login, activity, and sales"
+                    >
+                      <Eye className="w-3.5 h-3.5" />
+                    </button>
+                    <button
                       onClick={() => handleToggleUserActive(u)}
                       className={`px-2.5 py-1 rounded-lg text-xs font-semibold ${
                         u.active ? "text-red-600 hover:bg-red-50" : "text-emerald-600 hover:bg-emerald-50"
@@ -674,6 +697,51 @@ export function SettingsView({
           </table>
         </div>
       </div>
+
+      {isLoadingActivity && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="rounded-xl bg-white px-5 py-4 text-xs font-bold text-neutral-700">Loading staff activity…</div>
+        </div>
+      )}
+
+      {staffActivity && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-xs p-4">
+          <div className="bg-white rounded-2xl w-full max-w-3xl max-h-[85vh] overflow-hidden shadow-2xl border border-neutral-200 flex flex-col">
+            <div className="px-6 py-4 bg-neutral-900 text-white flex items-center justify-between">
+              <div>
+                <h3 className="font-bold text-base">{staffActivity.user.name} — Staff Detail</h3>
+                <p className="text-[11px] text-neutral-300 mt-0.5">{ROLE_LABELS[staffActivity.user.role]} · Last login: {staffActivity.user.lastLogin ? new Date(staffActivity.user.lastLogin).toLocaleString() : "Never"}</p>
+              </div>
+              <button onClick={() => setStaffActivity(null)} className="text-neutral-400 hover:text-white">✕</button>
+            </div>
+            <div className="p-5 overflow-y-auto space-y-5 text-xs">
+              <div className="grid grid-cols-3 gap-3">
+                <div className="rounded-xl border border-neutral-200 p-3"><span className="block text-neutral-500">Portal sessions</span><strong className="text-lg">{staffActivity.sessions.length}</strong></div>
+                <div className="rounded-xl border border-neutral-200 p-3"><span className="block text-neutral-500">Recorded sales</span><strong className="text-lg">{staffActivity.sales.length}</strong></div>
+                <div className="rounded-xl border border-neutral-200 p-3"><span className="block text-neutral-500">Activity events</span><strong className="text-lg">{staffActivity.auditLogs.length}</strong></div>
+              </div>
+              <section>
+                <h4 className="font-black text-neutral-900 mb-2 flex items-center gap-1"><Clock className="w-3.5 h-3.5" /> Login / logout time tracker</h4>
+                <div className="space-y-2">{staffActivity.sessions.length ? staffActivity.sessions.map(session => (
+                  <div key={session.id} className="rounded-xl bg-neutral-50 border border-neutral-200 p-3 flex justify-between gap-3"><span>Login: <strong>{new Date(session.loginAt).toLocaleString()}</strong></span><span className={session.active ? "font-bold text-emerald-700" : "text-neutral-600"}>{session.active ? "Currently logged in" : `Logout: ${session.logoutAt ? new Date(session.logoutAt).toLocaleString() : "—"}`}</span></div>
+                )) : <p className="text-neutral-500">No tracked portal sessions yet.</p>}</div>
+              </section>
+              <section>
+                <h4 className="font-black text-neutral-900 mb-2">Recent POS sales</h4>
+                <div className="space-y-2">{staffActivity.sales.length ? staffActivity.sales.map(sale => (
+                  <div key={sale.id} className="rounded-xl bg-neutral-50 border border-neutral-200 p-3 flex justify-between gap-3"><span><strong>{sale.invoiceNumber}</strong> · {new Date(sale.timestamp).toLocaleString()}</span><strong>${sale.grandTotal.toFixed(2)}</strong></div>
+                )) : <p className="text-neutral-500">No sales recorded for this staff account.</p>}</div>
+              </section>
+              <section>
+                <h4 className="font-black text-neutral-900 mb-2">Recent activity</h4>
+                <div className="space-y-2">{staffActivity.auditLogs.slice(0, 10).map(log => (
+                  <div key={log.id} className="rounded-xl bg-neutral-50 border border-neutral-200 p-3"><strong>{log.action}</strong><span className="ml-2 text-neutral-500">{new Date(log.timestamp).toLocaleString()}</span><p className="mt-1 text-neutral-600">{log.details}</p></div>
+                ))}</div>
+              </section>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* NEW USER MODAL */}
       {showUserModal && (

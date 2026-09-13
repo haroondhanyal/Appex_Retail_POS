@@ -27,7 +27,8 @@ import {
   NotificationItem,
   SystemSettings,
   AuditLog,
-  ThemeType
+  ThemeType,
+  StaffSession
 } from "./types";
 import { api } from "./services/api";
 
@@ -43,6 +44,7 @@ export default function App() {
   const [offlineCount, setOfflineCount] = useState(api.getOfflineSalesCount());
   const [isSyncing, setIsSyncing] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [activeSession, setActiveSession] = useState<StaffSession | null>(null);
 
   // Core Data State
   const [users, setUsers] = useState<User[]>([]);
@@ -298,6 +300,20 @@ export default function App() {
     setActiveView(defaultView);
   };
 
+  const handleLoginUser = async (user: User) => {
+    if (activeSession) await api.endStaffSession(activeSession.id);
+    const session = await api.startStaffSession(user.id);
+    setActiveSession(session);
+    handleSwitchUser(user);
+    api.getUsers().then(setUsers).catch(() => {});
+  };
+
+  const handleLogoutUser = async () => {
+    if (!activeSession) return;
+    await api.endStaffSession(activeSession.id);
+    setActiveSession(null);
+  };
+
   const handleUpdateSettings = async (newSettings: Partial<SystemSettings>) => {
     const updated = await api.updateSettings(newSettings);
     setSettings(updated);
@@ -358,6 +374,9 @@ export default function App() {
         currentUser={currentUser}
         users={users}
         onSwitchUser={handleSwitchUser}
+        activeSession={activeSession}
+        onLoginUser={handleLoginUser}
+        onLogoutUser={handleLogoutUser}
         settings={settings}
         onUpdateTheme={handleUpdateTheme}
         isOnline={isOnline}

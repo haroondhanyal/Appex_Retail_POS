@@ -879,6 +879,7 @@ let db = {
   purchases: INITIAL_PURCHASES,
   stockMovements: INITIAL_MOVEMENTS,
   auditLogs: INITIAL_AUDIT,
+  sessions: [] as any[],
   notifications: INITIAL_NOTIFICATIONS,
   settings: INITIAL_SETTINGS
 };
@@ -890,6 +891,7 @@ function loadDb() {
       const parsed = JSON.parse(raw);
       if (parsed.products && parsed.products.length > 0) {
         db = parsed;
+        if (!Array.isArray((db as any).sessions)) (db as any).sessions = [];
         console.log("Database loaded from persistent file:", DB_FILE);
         return;
       }
@@ -963,6 +965,56 @@ app.post("/api/auth/login", (req: Request, res: Response) => {
     user,
     token: "pos-token-" + user.id + "-" + Date.now()
   });
+});
+
+// Staff portal sessions. These power the admin activity view and are intentionally
+// separate from the lightweight demo authentication endpoint above.
+app.post("/api/staff-sessions/login", (req: Request, res: Response) => {
+  const user = db.users.find(u => u.id === req.body.userId && u.active);
+  if (!user) return res.status(404).json({ error: "Active staff user not found" });
+
+  const now = new Date().toISOString();
+  const session = {
+    id: "session-" + Date.now() + "-" + Math.random().toString(36).substring(2, 6),
+    userId: user.id,
+    userName: user.name,
+    role: user.role,
+    loginAt: now,
+    active: true
+  };
+  user.lastLogin = now;
+  (db as any).sessions.push(session);
+  logAudit(user.id, user.name, user.role, "PORTAL_LOGIN", "StaffSession", session.id, `${user.name} started a ${user.role} portal session`);
+  res.status(201).json(session);
+});
+
+app.post("/api/staff-sessions/:id/logout", (req: Request, res: Response) => {
+  const session = (db as any).sessions.find((item: any) => item.id === req.params.id);
+  if (!session) return res.status(404).json({ error: "Staff session not found" });
+  if (session.active) {
+    session.active = false;
+    session.logoutAt = new Date().toISOString();
+    logAudit(session.userId, session.userName, session.role, "PORTAL_LOGOUT", "StaffSession", session.id, `${session.userName} ended their portal session`);
+  }
+  saveDb();
+  res.json(session);
+});
+
+app.get("/api/users/:id/activity", (req: Request, res: Response) => {
+  const user = db.users.find(u => u.id === req.params.id);
+  if (!user) return res.status(404).json({ error: "User not found" });
+  const sessions = (db as any).sessions
+    .filter((session: any) => session.userId === user.id)
+    .sort((a: any, b: any) => new Date(b.loginAt).getTime() - new Date(a.loginAt).getTime())
+    .slice(0, 20);
+  const sales = db.sales
+    .filter(sale => sale.cashierId === user.id)
+    .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+    .slice(0, 20);
+  const auditLogs = db.auditLogs
+    .filter(log => log.userId === user.id)
+    .slice(0, 30);
+  res.json({ user, sessions, sales, auditLogs });
 });
 
 app.get("/api/users", (req: Request, res: Response) => {

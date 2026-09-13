@@ -10,7 +10,9 @@ import {
   AuditLog,
   NotificationItem,
   SystemSettings,
-  AIInsight
+  AIInsight,
+  StaffSession,
+  StaffActivity
 } from "../types";
 
 const OFFLINE_SALES_KEY = "apex_pos_offline_sales";
@@ -315,6 +317,28 @@ export const api = {
       const err = await res.json();
       throw new Error(err.error || "Failed to remove user");
     }
+  },
+
+  async startStaffSession(userId: string): Promise<StaffSession> {
+    const res = await fetch("/api/staff-sessions/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId })
+    });
+    if (!res.ok) throw new Error((await res.json()).error || "Unable to start staff session");
+    return res.json();
+  },
+
+  async endStaffSession(sessionId: string): Promise<StaffSession> {
+    const res = await fetch(`/api/staff-sessions/${sessionId}/logout`, { method: "POST" });
+    if (!res.ok) throw new Error((await res.json()).error || "Unable to end staff session");
+    return res.json();
+  },
+
+  async getUserActivity(userId: string): Promise<StaffActivity> {
+    const res = await fetch(`/api/users/${userId}/activity`);
+    if (!res.ok) throw new Error((await res.json()).error || "Unable to load staff activity");
+    return res.json();
   },
 
   // Dashboard & Reports
