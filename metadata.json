@@ -1,0 +1,10 @@
+{
+  "name": "Remix Apex Retail System",
+  "description": "Commercial-grade Retail Point of Sale and Inventory Management System with barcode scanner, offline sales, expiry tracking, thermal receipts, and Gemini AI assistant.",
+  "requestFramePermissions": [
+    "camera"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

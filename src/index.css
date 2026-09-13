@@ -1,0 +1,235 @@
+@import "tailwindcss";
+
+@layer base {
+  body {
+    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  }
+  .font-mono-receipt {
+    font-family: 'JetBrains Mono', monospace;
+  }
+}
+
+/* ==========================================================
+   Multi-Color Store Themes for Apex Retail System
+   ========================================================== */
+
+/* 1. Sapphire Blue */
+.theme-blue header {
+  border-bottom-color: #bfdbfe;
+}
+.theme-blue aside {
+  border-right-color: #dbeafe;
+}
+.theme-blue .bg-neutral-900:not(.theme-exempt) {
+  background-color: #1d4ed8 !important;
+}
+.theme-blue .hover\:bg-neutral-800:hover:not(.theme-exempt) {
+  background-color: #1e40af !important;
+}
+
+/* 2. Emerald Fresh */
+.theme-green header {
+  border-bottom-color: #a7f3d0;
+}
+.theme-green aside {
+  border-right-color: #d1fae5;
+}
+.theme-green .bg-neutral-900:not(.theme-exempt) {
+  background-color: #059669 !important;
+}
+.theme-green .hover\:bg-neutral-800:hover:not(.theme-exempt) {
+  background-color: #047857 !important;
+}
+
+/* 3. Royal Purple */
+.theme-purple header {
+  border-bottom-color: #ddd6fe;
+}
+.theme-purple aside {
+  border-right-color: #ede9fe;
+}
+.theme-purple .bg-neutral-900:not(.theme-exempt) {
+  background-color: #7c3aed !important;
+}
+.theme-purple .hover\:bg-neutral-800:hover:not(.theme-exempt) {
+  background-color: #6d28d9 !important;
+}
+
+/* 4. Warm Amber */
+.theme-amber header {
+  border-bottom-color: #fde68a;
+}
+.theme-amber aside {
+  border-right-color: #fef3c7;
+}
+.theme-amber .bg-neutral-900:not(.theme-exempt) {
+  background-color: #d97706 !important;
+}
+.theme-amber .hover\:bg-neutral-800:hover:not(.theme-exempt) {
+  background-color: #b45309 !important;
+}
+
+/* 5. Ruby Crimson */
+.theme-rose header {
+  border-bottom-color: #fecdd3;
+}
+.theme-rose aside {
+  border-right-color: #ffe4e6;
+}
+.theme-rose .bg-neutral-900:not(.theme-exempt) {
+  background-color: #e11d48 !important;
+}
+.theme-rose .hover\:bg-neutral-800:hover:not(.theme-exempt) {
+  background-color: #be123c !important;
+}
+
+/* 6. Teal Modern */
+.theme-teal header {
+  border-bottom-color: #99f6e4;
+}
+.theme-teal aside {
+  border-right-color: #ccfbf1;
+}
+.theme-teal .bg-neutral-900:not(.theme-exempt) {
+  background-color: #0d9488 !important;
+}
+.theme-teal .hover\:bg-neutral-800:hover:not(.theme-exempt) {
+  background-color: #0f766e !important;
+}
+
+/* 7. Midnight Dark Theme */
+.theme-dark {
+  color-scheme: dark;
+}
+.theme-dark header,
+.theme-dark aside,
+.theme-dark .bg-white {
+  background-color: #121215;
+  color: #f4f4f5;
+  border-color: #27272a;
+}
+.theme-dark .bg-neutral-50 {
+  background-color: #09090b;
+}
+.theme-dark .bg-neutral-100 {
+  background-color: #1c1c20;
+  color: #e4e4e7;
+}
+.theme-dark .text-neutral-900 {
+  color: #fafafa;
+}
+.theme-dark .text-neutral-700 {
+  color: #d4d4d8;
+}
+.theme-dark .text-neutral-500 {
+  color: #a1a1aa;
+}
+.theme-dark .border-neutral-200,
+.theme-dark .border-neutral-300 {
+  border-color: #27272a;
+}
+.theme-dark .border-neutral-100 {
+  border-color: #1f1f23;
+}
+.theme-dark input,
+.theme-dark select,
+.theme-dark textarea {
+  background-color: #1c1c20;
+  color: #fafafa;
+  border-color: #27272a;
+}
+
+/* 8. Onyx Carbon Theme */
+.theme-black-grey {
+  color-scheme: dark;
+}
+.theme-black-grey header,
+.theme-black-grey aside,
+.theme-black-grey .bg-white {
+  background-color: #18181b;
+  color: #f4f4f5;
+  border-color: #2e2e33;
+}
+.theme-black-grey .bg-neutral-50 {
+  background-color: #0f0f11;
+}
+.theme-black-grey .bg-neutral-100 {
+  background-color: #27272a;
+  color: #e4e4e7;
+}
+.theme-black-grey .text-neutral-900 {
+  color: #fafafa;
+}
+.theme-black-grey .text-neutral-700 {
+  color: #d4d4d8;
+}
+.theme-black-grey .text-neutral-500 {
+  color: #a1a1aa;
+}
+.theme-black-grey .border-neutral-200,
+.theme-black-grey .border-neutral-300 {
+  border-color: #2e2e33;
+}
+.theme-black-grey input,
+.theme-black-grey select,
+.theme-black-grey textarea {
+  background-color: #242427;
+  color: #fafafa;
+  border-color: #333338;
+}
+
+/* 9. Solar High Contrast */
+.theme-high-contrast header,
+.theme-high-contrast aside,
+.theme-high-contrast .bg-white {
+  background-color: #000000;
+  color: #facc15;
+  border-color: #facc15;
+}
+.theme-high-contrast .bg-neutral-50,
+.theme-high-contrast .bg-neutral-100 {
+  background-color: #0a0a0a;
+  color: #facc15;
+}
+.theme-high-contrast .text-neutral-900,
+.theme-high-contrast .text-neutral-800,
+.theme-high-contrast .text-neutral-700,
+.theme-high-contrast .text-neutral-600,
+.theme-high-contrast .text-neutral-500 {
+  color: #fde047;
+}
+.theme-high-contrast .border-neutral-200,
+.theme-high-contrast .border-neutral-300,
+.theme-high-contrast .border-neutral-100 {
+  border-color: #ca8a04;
+}
+.theme-high-contrast .bg-neutral-900 {
+  background-color: #facc15 !important;
+  color: #000000 !important;
+}
+.theme-high-contrast input,
+.theme-high-contrast select,
+.theme-high-contrast textarea {
+  background-color: #000000;
+  color: #facc15;
+  border-color: #facc15;
+}
+
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  #printable-receipt, #printable-receipt * {
+    visibility: visible;
+  }
+  #printable-receipt {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    background: white !important;
+    color: black !important;
+  }
+}
