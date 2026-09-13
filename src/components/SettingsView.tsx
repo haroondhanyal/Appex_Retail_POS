@@ -173,7 +173,7 @@ export function SettingsView({
 
   // New User Form Modal
   const [showUserModal, setShowUserModal] = useState(false);
-  const [newUserForm, setNewUserForm] = useState({
+  const [newUserForm, setNewUserForm] = useState<Pick<User, "name" | "username" | "role" | "email" | "phone">>({
     name: "",
     username: "",
     role: "cashier",
@@ -654,7 +654,7 @@ export function SettingsView({
                 <label className="text-xs font-bold text-neutral-700 block mb-1">Role</label>
                 <select
                   value={newUserForm.role}
-                  onChange={e => setNewUserForm({ ...newUserForm, role: e.target.value })}
+                  onChange={e => setNewUserForm({ ...newUserForm, role: e.target.value as User["role"] })}
                   className="w-full px-3 py-2 border border-neutral-300 rounded-xl text-xs"
                 >
                   <option value="cashier">Cashier</option>

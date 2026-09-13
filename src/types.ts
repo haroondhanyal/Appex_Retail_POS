@@ -148,6 +148,7 @@ export interface PurchaseItem {
   taxRate: number;
   discountPercent: number;
   lineTotal: number;
+  image?: string;
   batchNumber?: string;
   mfgDate?: string;
   expiryDate?: string;
