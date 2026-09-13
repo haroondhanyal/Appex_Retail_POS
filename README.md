@@ -75,10 +75,13 @@ Each account opens a role-specific portal. Navigation is filtered by the selecte
 ### Staff-account workflow
 
 1. An admin opens **Admin & Staff Control**.
-2. Select **Add Staff User**, enter the name, username, contact details, and portal role.
-3. The account appears in the staff table and can be switched to from the header in this local/demo build.
-4. Admins can activate/deactivate staff access or permanently remove an account. The system prevents removal of the final active admin.
-5. When a user switches portal, the app automatically opens their default workspace: warehouse managers open stock control; cashiers and sales assistants open POS; managers/admins open the dashboard.
+2. Choose a portal card (Cashier, Sales Assistant, Manager, Warehouse, or Admin) to start a role-preselected staff account, or select **Add Staff User**.
+3. Enter the name, username, email/phone, and portal role. The role selector explains the access the new staff member will receive.
+4. The account appears in the staff table and can be switched to from the header in this local/demo build.
+5. Admins can activate/deactivate staff access or permanently remove an account. The system prevents removal of the final active admin.
+6. When a user switches portal, the app automatically opens their default workspace: warehouse managers open stock control; cashiers and sales assistants open POS; managers/admins open the dashboard.
+
+Dashboard KPI cards and AI insight cards are interactive: selecting a card opens its related sales, report, product, or warehouse workspace. Use **Refresh AI Insights** to reload the latest local analytics.
 
 > The included authentication endpoint and role controls are suitable for a local/demo foundation. Before production use, add password hashing, real session/token verification, authorization middleware, validation, a production database, and secure secret management.
 

@@ -16,6 +16,7 @@ import { api } from "../services/api";
 
 interface AIAssistantViewProps {
   currentUser: User;
+  onNavigate: (view: string) => void;
 }
 
 interface Message {
@@ -26,7 +27,7 @@ interface Message {
   modelUsed?: string;
 }
 
-export function AIAssistantView({ currentUser }: AIAssistantViewProps) {
+export function AIAssistantView({ currentUser, onNavigate }: AIAssistantViewProps) {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: "msg-0",
@@ -107,6 +108,12 @@ export function AIAssistantView({ currentUser }: AIAssistantViewProps) {
     "Suggest pricing strategies for expiring items"
   ];
 
+  const insightDestination = (type: AIInsight["type"]) => {
+    if (type === "stock_risk" || type === "expiry_risk" || type === "dead_stock") return "inventory";
+    if (type === "cashier_anomaly") return "sales";
+    return "products";
+  };
+
   return (
     <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6 bg-neutral-50 flex flex-col h-full">
       {/* Header */}
@@ -141,15 +148,18 @@ export function AIAssistantView({ currentUser }: AIAssistantViewProps) {
           const isHigh = ins.severity === "high";
           const isMedium = ins.severity === "medium";
           return (
-            <div
+            <button
               key={ins.id}
+              type="button"
+              onClick={() => onNavigate(insightDestination(ins.type))}
+              title="Open the related workspace"
               className={`p-4 rounded-2xl border shadow-2xs bg-white ${
                 isHigh
                   ? "border-red-200 bg-red-50/20"
                   : isMedium
                   ? "border-amber-200 bg-amber-50/20"
                   : "border-blue-200 bg-blue-50/20"
-              }`}
+              } text-left hover:shadow-sm hover:-translate-y-0.5 transition`}
             >
               <div className="flex items-center justify-between mb-2">
                 <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-500">
@@ -175,7 +185,8 @@ export function AIAssistantView({ currentUser }: AIAssistantViewProps) {
                   <span>{ins.actionable}</span>
                 </div>
               )}
-            </div>
+              <span className="mt-3 block text-[10px] font-bold text-blue-600">Open related workspace →</span>
+            </button>
           );
         })}
       </div>

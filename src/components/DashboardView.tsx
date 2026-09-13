@@ -111,7 +111,7 @@ export function DashboardView({
       {/* Primary KPI Grid */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         {/* Today's Sales */}
-        <div className="bg-white p-4 sm:p-5 rounded-2xl border border-neutral-200 shadow-2xs">
+        <button onClick={() => onNavigate("sales")} className="bg-white p-4 sm:p-5 rounded-2xl border border-neutral-200 shadow-2xs text-left hover:border-emerald-300 hover:shadow-sm transition" title="Open sales and receipts">
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold text-neutral-500 uppercase tracking-wider">
               Today's Net Sales
@@ -129,10 +129,10 @@ export function DashboardView({
               <ArrowUpRight className="w-3 h-3" /> Live
             </span>
           </div>
-        </div>
+        </button>
 
         {/* Estimated Profit */}
-        <div className="bg-white p-4 sm:p-5 rounded-2xl border border-neutral-200 shadow-2xs">
+        <button onClick={() => onNavigate("reports")} className="bg-white p-4 sm:p-5 rounded-2xl border border-neutral-200 shadow-2xs text-left hover:border-blue-300 hover:shadow-sm transition" title="Open analytics and profit reports">
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold text-neutral-500 uppercase tracking-wider">
               Gross Profit Margin
@@ -148,10 +148,10 @@ export function DashboardView({
             <span>Margin: {todaySales > 0 ? ((todayProfit / todaySales) * 100).toFixed(1) : "0.0"}%</span>
             <span className="text-blue-600 font-semibold text-[11px]">COGS tracked</span>
           </div>
-        </div>
+        </button>
 
         {/* Inventory Stock Value */}
-        <div className="bg-white p-4 sm:p-5 rounded-2xl border border-neutral-200 shadow-2xs">
+        <button onClick={() => onNavigate("inventory")} className="bg-white p-4 sm:p-5 rounded-2xl border border-neutral-200 shadow-2xs text-left hover:border-neutral-400 hover:shadow-sm transition" title="Open inventory catalog">
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold text-neutral-500 uppercase tracking-wider">
               Inventory Asset Value
@@ -167,10 +167,10 @@ export function DashboardView({
             <span>{products.length} catalog items</span>
             <span className="text-neutral-700 font-semibold text-[11px]">At Cost Price</span>
           </div>
-        </div>
+        </button>
 
         {/* Expiry & Stock Risk Card */}
-        <div className="bg-white p-4 sm:p-5 rounded-2xl border border-neutral-200 shadow-2xs">
+        <button onClick={() => onNavigate("inventory")} className="bg-white p-4 sm:p-5 rounded-2xl border border-neutral-200 shadow-2xs text-left hover:border-amber-300 hover:shadow-sm transition" title="Inspect stock and expiry alerts">
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold text-neutral-500 uppercase tracking-wider">
               Stock & Expiry Alerts
@@ -187,14 +187,9 @@ export function DashboardView({
           </div>
           <div className="flex items-center justify-between text-xs text-neutral-500 mt-2 pt-2 border-t border-neutral-100">
             <span className="text-red-600 font-bold">{lowStockCount + outOfStockCount} low/zero stock</span>
-            <button
-              onClick={() => onNavigate("inventory")}
-              className="text-neutral-900 hover:underline font-bold text-[11px]"
-            >
-              Inspect
-            </button>
+            <span className="text-neutral-900 font-bold text-[11px]">Inspect →</span>
           </div>
-        </div>
+        </button>
       </div>
 
       {/* Row 2: Top Selling Products & Cashier Performance */}

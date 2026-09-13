@@ -478,7 +478,7 @@ export default function App() {
             />
           )}
 
-          {activeView === "ai" && <AIAssistantView currentUser={currentUser} />}
+          {activeView === "ai" && <AIAssistantView currentUser={currentUser} onNavigate={setActiveView} />}
 
           {activeView === "audit" && <AuditLogsView logs={auditLogs} />}
 

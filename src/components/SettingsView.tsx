@@ -15,7 +15,15 @@ import {
   Check,
   Trash2
 } from "lucide-react";
-import { SystemSettings, User, ThemeType } from "../types";
+import { SystemSettings, User, ThemeType, Role, ROLE_LABELS } from "../types";
+
+const STAFF_ROLE_OPTIONS: { role: Role; description: string; access: string }[] = [
+  { role: "cashier", description: "Runs checkout, scans products, and manages receipts.", access: "POS, receipts, AI Copilot" },
+  { role: "salesperson", description: "Helps customers and completes counter sales.", access: "POS, receipts, AI Copilot" },
+  { role: "manager", description: "Operates the store, catalogue, purchasing, and reports.", access: "Operational portal" },
+  { role: "warehouse_manager", description: "Controls stock, expiry, adjustments, and inbound deliveries.", access: "Warehouse portal" },
+  { role: "admin", description: "Owns full access, configuration, audit records, and staff control.", access: "All portals" }
+];
 
 const AVAILABLE_THEMES: {
   id: ThemeType;
@@ -586,6 +594,30 @@ export function SettingsView({
           </button>
         </div>
 
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-2">
+          {STAFF_ROLE_OPTIONS.map(option => {
+            const count = users.filter(user => user.role === option.role).length;
+            return (
+              <button
+                key={option.role}
+                type="button"
+                onClick={() => {
+                  setNewUserForm(current => ({ ...current, role: option.role }));
+                  setShowUserModal(true);
+                }}
+                className="text-left p-3 rounded-xl border border-neutral-200 bg-neutral-50 hover:border-blue-300 hover:bg-blue-50 transition"
+                title={`Create ${ROLE_LABELS[option.role]} account`}
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-[11px] font-black text-neutral-900">{ROLE_LABELS[option.role]}</span>
+                  <span className="text-[10px] font-bold rounded-full bg-white px-1.5 py-0.5 text-neutral-600">{count}</span>
+                </div>
+                <p className="mt-1 text-[10px] leading-relaxed text-neutral-500">{option.access}</p>
+              </button>
+            );
+          })}
+        </div>
+
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
             <thead>
@@ -605,7 +637,7 @@ export function SettingsView({
                   <td className="py-2.5 font-mono text-neutral-600">{u.username}</td>
                   <td className="py-2.5">
                     <span className="capitalize px-2 py-0.5 rounded-full text-[10px] font-bold bg-neutral-100 text-neutral-800">
-                      {u.role}
+                      {ROLE_LABELS[u.role]}
                     </span>
                   </td>
                   <td className="py-2.5 text-neutral-500">{u.email || u.phone || "—"}</td>
@@ -681,12 +713,13 @@ export function SettingsView({
                   onChange={e => setNewUserForm({ ...newUserForm, role: e.target.value as User["role"] })}
                   className="w-full px-3 py-2 border border-neutral-300 rounded-xl text-xs"
                 >
-                  <option value="cashier">Cashier</option>
-                  <option value="manager">Manager</option>
-                  <option value="warehouse_manager">Warehouse Manager</option>
-                  <option value="admin">Admin / Owner</option>
-                  <option value="salesperson">Salesperson / POS Assistant</option>
+                  {STAFF_ROLE_OPTIONS.map(option => (
+                    <option key={option.role} value={option.role}>{ROLE_LABELS[option.role]}</option>
+                  ))}
                 </select>
+                <p className="mt-1.5 text-[11px] text-neutral-500">
+                  {STAFF_ROLE_OPTIONS.find(option => option.role === newUserForm.role)?.description}
+                </p>
               </div>
               <div>
                 <label className="text-xs font-bold text-neutral-700 block mb-1">Email</label>
@@ -694,6 +727,15 @@ export function SettingsView({
                   type="email"
                   value={newUserForm.email}
                   onChange={e => setNewUserForm({ ...newUserForm, email: e.target.value })}
+                  className="w-full px-3 py-2 border border-neutral-300 rounded-xl text-xs"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-bold text-neutral-700 block mb-1">Phone</label>
+                <input
+                  type="tel"
+                  value={newUserForm.phone}
+                  onChange={e => setNewUserForm({ ...newUserForm, phone: e.target.value })}
                   className="w-full px-3 py-2 border border-neutral-300 rounded-xl text-xs"
                 />
               </div>
